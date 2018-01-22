@@ -1,0 +1,94 @@
+- hosts: localhost
+  tags: always
+  vars:
+    # Compute host var from either extra var or CORNAC_HOST env var. If no host
+    # are provided, fallback to localhost.
+    play_host: "{{ host|default(ansible_env.CORNAC_HOST)|default('localhost') }}"
+  tasks:
+  # If no hosts are provided, add parameterized host to inventory.
+  - name: Autoinventory
+    when: hostvars|length == 0
+    add_host:
+      name: "{{ play_host }}"
+      groups: cornac
+    changed_when: no
+
+- hosts: cornac
+  become: yes
+  tasks:
+  - name: install rpm-python for Ansible
+    tags: always
+    # env is just a hack to avoid Ansible warning.
+    shell: env LC_ALL=C.UTF-8 yum install -y rpm-python
+    register: out
+    changed_when: '"Nothing to do" not in out.stdout_lines'
+
+  # cornac_repositories is a dict of yum repositories with arguments for
+  # `yum_repository` module. repo name and file are computed from dict key.
+
+  - name: enable repositories
+    tags: yum
+    with_dict: '{{ cornac_repositories|default({}) }}'
+    yum_repository:
+      file: '{{ item.key }}.repo'
+      name: '{{ item.key }}'
+      description: '{{ item.value.description }}|default(item.key)'
+      baseurl: '{{ item.value.baseurl|default(omit) }}'
+      gpgcheck: '{{ item.value.gpgcheck|default(False) }}'
+
+
+  # cornac_packages_stage1 is a list of packages to bootstrap installation. It's
+  # intended to reference epel-release or pgdg repo rpm.
+
+  - name: install packages stage 1
+    tags: yum
+    with_items: '{{ cornac_packages_stage1|default([]) }}'
+    yum:
+      name: "{{ item }}"
+      state: latest
+
+  # cornac_packages_stage2 lists packages to install from repositories or http.
+  # It's here you'll list postgres packages.
+
+  - name: install packages stage 2
+    tags: yum
+    with_items: '{{ cornac_packages_stage2|default([]) }}'
+    yum:
+      name: "{{ item }}"
+      state: latest
+
+  # cornac_packages_local is a list of path to rpm on controller host to push to
+  # target host. It's meant for deployment of custom packages.
+
+  - name: copy local packages
+    tags: yum
+    with_items: '{{ cornac_packages_local|default([]) }}'
+    copy:
+      src: '{{ item }}'
+      dest: '/tmp'
+
+  - name: install local packages
+    tags: yum
+    with_items: '{{ cornac_packages_local|default([]) }}'
+    yum:
+      name: '/tmp/{{ item|basename }}'
+
+  # cornac_sysctl is a mapping of sysctl key/value to tweak kernel
+
+  - name: configure kernel
+    tags: sysctl
+    with_dict: '{{ cornac_sysctl|default({}) }}'
+    sysctl:
+      state: present
+      key: '{{ item.key }}'
+      value: '{{ item.value }}'
+      reload: yes
+
+  # postgres user must have a SSH key for replication
+
+  - name: generate SSH key
+    tags: ssh
+    user:
+      name: postgres
+      state: present
+      generate_ssh_key: yes

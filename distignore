@@ -1,0 +1,5 @@
+.*
+distignore
+Makefile
+*.md
+nodist-*
