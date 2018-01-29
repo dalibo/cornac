@@ -1,0 +1,8 @@
+---
+cornac_sysctl_defaults:
+  vm.overcommit_memory: 0
+  vm.zone_reclaim_mode: 0
+  vm.swappiness: 5
+  vm.dirty_ratio: 2
+  vm.dirty_background_ratio: 1
+cornac_sysctl: '{{ cornac_sysctl_defaults }}'

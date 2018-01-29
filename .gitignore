@@ -1,0 +1,3 @@
+build/
+# nodist-* files and directories are neither versionned nor distributed.
+nodist-*
