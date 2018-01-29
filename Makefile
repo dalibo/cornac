@@ -9,4 +9,4 @@ RSYNC=rsync --exclude-from=distignore --recursive --update
 build:
 	mkdir -p $(BUILDDIR)
 	$(RSYNC) ./ $(BUILDDIR)/
-	$(RSYNC) $(ANSIBLE_INVENTORY)/ $(BUILDDIR)/inventory.d/
+	if [ -n "$(ANSIBLE_INVENTORY)" ] ; then $(RSYNC) $(ANSIBLE_INVENTORY)/ $(BUILDDIR)/inventory.d/; fi
