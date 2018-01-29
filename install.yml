@@ -57,6 +57,14 @@
       name: "{{ item }}"
       state: latest
 
+  - name: install features
+    when: features is defined
+    tags: yum,features
+    with_items: "{{ features.split(',') }}"
+    yum:
+      name: "{{ cornac_packages_features[item] }}"
+      state: latest
+
   # cornac_packages_local is a list of path to rpm on controller host to push to
   # target host. It's meant for deployment of custom packages.
 
