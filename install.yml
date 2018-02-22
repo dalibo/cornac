@@ -17,7 +17,7 @@
   become: yes
   tasks:
   - name: install rpm-python for Ansible
-    tags: always
+    tags: yum
     # env is just a hack to avoid Ansible warning.
     shell: env LC_ALL=C.UTF-8 yum install -y rpm-python
     register: out
@@ -69,14 +69,14 @@
   # target host. It's meant for deployment of custom packages.
 
   - name: copy local packages
-    tags: yum
+    tags: local,yum
     with_items: '{{ cornac_packages_local|default([]) }}'
     copy:
       src: '{{ item }}'
       dest: '/tmp'
 
   - name: install local packages
-    tags: yum
+    tags: local,yum
     with_items: '{{ cornac_packages_local|default([]) }}'
     yum:
       name: '/tmp/{{ item|basename }}'
