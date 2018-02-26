@@ -42,9 +42,8 @@
 
   - name: install packages stage 1
     tags: yum
-    with_items: '{{ cornac_packages_stage1|default([]) }}'
     yum:
-      name: "{{ item }}"
+      name: "{{ cornac_packages_stage1|default([])|join(',') }}"
       state: latest
 
   # cornac_packages_stage2 lists packages to install from repositories or http.
@@ -52,9 +51,8 @@
 
   - name: install packages stage 2
     tags: yum
-    with_items: '{{ cornac_packages_stage2|default([]) }}'
     yum:
-      name: "{{ item }}"
+      name: "{{ cornac_packages_stage2|default([])|join(',') }}"
       state: latest
 
   - name: install features
