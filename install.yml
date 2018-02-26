@@ -45,6 +45,7 @@
     yum:
       name: "{{ cornac_packages_stage1|default([])|join(',') }}"
       state: latest
+      update_cache: yes
 
   # cornac_packages_stage2 lists packages to install from repositories or http.
   # It's here you'll list postgres packages.
