@@ -21,9 +21,10 @@
     register: ssh_pubkey
 
   - name: SSH | Read host key
-    shell: ssh-keyscan {{ inventory_hostname }}
+    shell: ssh-keyscan {{ cornac_host | default(inventory_hostname) }}
     register: ssh_hostkey
     changed_when: false
+    failed_when: "cornac_host not in ssh_hostkey.stdout"
 
   - name: SSH | Save public and host keys
     set_fact:
