@@ -1,0 +1,61 @@
+# This playbook creates and shares SSH keys between hosts.
+#
+# This is a special step when setting up High-Availibility cluster. This
+# playbook only shares SSH key for the hosts matching --limit option.
+---
+- name: SSH | Create SSH key
+  hosts: cornac
+  vars:
+    sysuser: "{{ cornac_sysuser | default('postgres') }}"
+  become: yes
+  tasks:
+  - name: SSH | Create private key
+    user:
+      name: "{{ sysuser }}"
+      state: present
+      generate_ssh_key: yes
+    
+  - name: SSH | Read public key
+    slurp:
+      src: ~{{ sysuser }}/.ssh/id_rsa.pub
+    register: ssh_pubkey
+
+  - name: SSH | Read host key
+    shell: ssh-keyscan {{ inventory_hostname }}
+    register: ssh_hostkey
+    changed_when: false
+
+  - name: SSH | Save public and host keys
+    set_fact:
+      cornac_ssh_pubkey: "{{ ssh_pubkey.content | b64decode}}"
+      cornac_ssh_hostkey: "{{ ssh_hostkey.stdout }}"
+
+
+- name: SSH | Accept SSH key on each hosts
+  hosts: cornac
+  vars:
+    sysuser: "{{ cornac_sysuser | default('postgres') }}"
+  become: yes
+  tasks:
+  - name: SSH | Add public key
+    loop: "{{ query('dict', hostvars) }}"
+    # Ignore hosts excluded by --limit
+    when: item.value.cornac_ssh_pubkey is defined
+    authorized_key:
+      user: "{{ sysuser }}"
+      key: "{{ item.value.cornac_ssh_pubkey }}"
+
+  - name: SSH | Add host key
+    loop: "{{ query('dict', hostvars) }}"
+    # Ignore hosts excluded by --limit
+    when: item.value.cornac_ssh_hostkey is defined
+    known_hosts:
+      key: "{{ item.value.cornac_ssh_hostkey }}"
+      host: "{{ item.value.cornac_host | default(item.key) }}"
+      path: "~{{ sysuser }}/.ssh/known_hosts"
+
+  - name: SSH | Fix known_hosts permissions
+    file:
+      path: "~{{ sysuser }}/.ssh/known_hosts"
+      owner: "{{ sysuser }}"
+      group: "{{ sysuser }}"

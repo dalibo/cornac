@@ -44,3 +44,34 @@ myhost0                    : ok=8    changed=0    unreachable=0    failed=0
 
 $
 ```
+
+
+## Sharing SSH key between hosts
+
+For Replication and High-Availibility cluster, you may want to share SSH key
+between hosts. `sshkeys.yml` takes care of creating and sharing public user key
+and host key between hosts.
+
+If you have several HA cluster or just want to limit SSH key sharing for a
+subset of your inventory, create a host subgroup of cornac host group. Then use
+`--limit` option of *Ansible* to share SSH key only inside this group.
+
+
+``` console
+$ cat inventory.d/my-hosts.ini
+[prod]
+prod0
+prod1
+
+[cornac]
+preprod
+
+[cornac:children]
+prod
+$ ansible-playbook sshkeys.yml --limit socle10
+...
+PLAY RECAP *********************************************************************
+prod0             : ok=9    changed=0    unreachable=0    failed=0
+prod1             : ok=9    changed=0    unreachable=0    failed=0
+
+```
