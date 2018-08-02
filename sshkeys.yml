@@ -21,9 +21,10 @@
     register: ssh_pubkey
 
   - name: SSH | Read host key
-    shell: ssh-keyscan {{ inventory_hostname }}
+    shell: ssh-keyscan {{ cornac_host | default(inventory_hostname) }}
     register: ssh_hostkey
     changed_when: false
+    failed_when: "cornac_host not in ssh_hostkey.stdout"
 
   - name: SSH | Save public and host keys
     set_fact:
@@ -38,20 +39,20 @@
   become: yes
   tasks:
   - name: SSH | Add public key
-    loop: "{{ query('dict', hostvars) }}"
+    loop: "{{ query('items', groups['cornac']) }}"
     # Ignore hosts excluded by --limit
-    when: item.value.cornac_ssh_pubkey is defined
+    when: hostvars[item].cornac_ssh_pubkey is defined
     authorized_key:
       user: "{{ sysuser }}"
-      key: "{{ item.value.cornac_ssh_pubkey }}"
+      key: "{{ hostvars[item].cornac_ssh_pubkey }}"
 
   - name: SSH | Add host key
-    loop: "{{ query('dict', hostvars) }}"
+    loop: "{{ query('items', groups['cornac']) }}"
     # Ignore hosts excluded by --limit
-    when: item.value.cornac_ssh_hostkey is defined
+    when: hostvars[item].cornac_ssh_hostkey is defined
     known_hosts:
-      key: "{{ item.value.cornac_ssh_hostkey }}"
-      host: "{{ item.value.cornac_host | default(item.key) }}"
+      key: "{{ hostvars[item].cornac_ssh_hostkey }}"
+      host: "{{ hostvars[item].cornac_host | default(item) }}"
       path: "~{{ sysuser }}/.ssh/known_hosts"
 
   - name: SSH | Fix known_hosts permissions
