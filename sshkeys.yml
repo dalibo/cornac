@@ -9,6 +9,9 @@
     sysuser: "{{ cornac_sysuser | default('postgres') }}"
   become: yes
   tasks:
+  - set_fact:
+      cornac_host_final: "{{ cornac_host | default(inventory_hostname) }}"
+
   - name: SSH | Create private key
     user:
       name: "{{ sysuser }}"
@@ -21,10 +24,10 @@
     register: ssh_pubkey
 
   - name: SSH | Read host key
-    shell: ssh-keyscan {{ cornac_host | default(inventory_hostname) }}
+    shell: ssh-keyscan {{ cornac_host_final }}
     register: ssh_hostkey
     changed_when: false
-    failed_when: "cornac_host not in ssh_hostkey.stdout"
+    failed_when: "cornac_host_final not in ssh_hostkey.stdout"
 
   - name: SSH | Save public and host keys
     set_fact:
@@ -52,7 +55,7 @@
     when: hostvars[item].cornac_ssh_hostkey is defined
     known_hosts:
       key: "{{ hostvars[item].cornac_ssh_hostkey }}"
-      host: "{{ hostvars[item].cornac_host | default(item) }}"
+      host: "{{ hostvars[item].cornac_host_final }}"
       path: "~{{ sysuser }}/.ssh/known_hosts"
 
   - name: SSH | Fix known_hosts permissions
