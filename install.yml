@@ -32,7 +32,7 @@
     yum_repository:
       file: '{{ item.key }}.repo'
       name: '{{ item.key }}'
-      description: '{{ item.value.description }}|default(item.key)'
+      description: '{{ item.value.description | default(item.key) }}'
       baseurl: '{{ item.value.baseurl|default(omit) }}'
       gpgcheck: '{{ item.value.gpgcheck|default(False) }}'
 
