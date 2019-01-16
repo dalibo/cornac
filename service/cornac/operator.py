@@ -39,8 +39,8 @@ class SocleOperator(object):
         name = f"cornac-{command['DBInstanceIdentifier']}"
         origin = self.config['original_machine']
         machine = self.iaas.create_machine(newname=name, origin=origin)
-
-        disk = self.iaas.create_disk(
+        storage_pool = self.iaas.get_pool(self.config['storage_pool'])
+        disk = storage_pool.create_disk(
             name=f'{name}-data.qcow2',
             size=int(command['AllocatedStorage'] * _1G),
         )

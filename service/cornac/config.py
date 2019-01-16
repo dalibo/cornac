@@ -11,4 +11,5 @@ def make_poc_config():
         dns_domain='.virt',
         original_machine='base-cornac',
         root_ssh_public_key=ssh_key,
+        storage_pool='default',
     )
