@@ -42,7 +42,7 @@ class SocleOperator(object):
 
         disk = self.iaas.create_disk(
             name=f'{name}-data.qcow2',
-            size=command['AllocatedStorage'] * _1G,
+            size=int(command['AllocatedStorage'] * _1G),
         )
         machine.attach_disk(disk)
         machine.start()
@@ -100,7 +100,7 @@ def test_main():
     # What aws would send to REST API.
     command = {
         'DBInstanceIdentifier': 'cli0',
-        'AllocatedStorage': '5',
+        'AllocatedStorage': 5,
         'DBInstanceClass': 'db.t2.micro',
         'Engine': 'postgres',
         'MasterUsername': 'postgres',

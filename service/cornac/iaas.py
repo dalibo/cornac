@@ -2,6 +2,7 @@
 #
 
 import logging
+import os
 import shlex
 import socket
 import subprocess
@@ -85,14 +86,20 @@ class LibVirtIaaS(object):
             logger.debug("Reusing disk %s.", name)
             return disk
 
-        # For now, just clone definition of first disk found in pool. Including
-        # size.
+        # For now, just clone definition of first disk found in pool.
         vol0 = pool.listAllVolumes()[0]
-        oldxml = vol0.XMLDesc()
-        newxml = oldxml.replace(vol0.name(), name)
+        xvol = ET.fromstring(vol0.XMLDesc())
+        xvol.find('./name').text = name
+        xkey = xvol.find('./key')
+        xkey.text = os.path.dirname(xkey.text) + "/" + name
+        xvol.find('./target/path').text = xkey.text
+        xvol.find('./capacity').text = "%d" % size
+        # Prallocate 256K, for partition, PV metadata and mkfs.
+        xvol.find('./allocation').text = "%d" % (256 * 1024,)
+        xvol.remove(xvol.find('./physical'))
 
         logger.debug("Creating disk %s.", name)
-        return pool.createXML(newxml)
+        return pool.createXML(ET.tostring(xvol, encoding='unicode'))
 
     def endpoint(self, machine):
         # Let's DNS resolve machine IP for now.

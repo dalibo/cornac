@@ -102,13 +102,14 @@ class RDS(object):
 
     @classmethod
     def CreateDBInstance(cls, command):
-        logger.debug("%r", command)
         instance = DBInstance(
             identifier=command['DBInstanceIdentifier'],
             status='creating',
         )
         INSTANCES[instance.identifier] = instance
-        cls.workerpool.submit(create_db_task, command.copy())
+        command = command.copy()
+        command['AllocatedStorage'] = int(command['AllocatedStorage'])
+        cls.workerpool.submit(create_db_task, command)
         return instance.as_xml()
 
     INSTANCE_LIST_TMPL = Template(dedent("""\
