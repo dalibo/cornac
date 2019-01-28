@@ -65,10 +65,10 @@ class LibVirtIaaS(object):
                 "--hostname", newname,
                 "--selinux-relabel",
             ]
-            if self.config['root_ssh_public_key']:
+            if self.config['ROOT_PUBLIC_KEY']:
                 prepare_cmd.extend([
                     "--ssh-inject",
-                    f"root:string:{self.config['root_ssh_public_key']}",
+                    f"root:string:{self.config['ROOT_PUBLIC_KEY']}",
                 ])
             logger.debug("Preparing machine.")
             logged_cmd(prepare_cmd)
@@ -80,11 +80,11 @@ class LibVirtIaaS(object):
 
     def endpoint(self, machine):
         # Let's DNS resolve machine IP for now.
-        return machine.name + self.config['dns_domain']
+        return machine.name + self.config['DNS_DOMAIN']
 
 
 @tenacity.retry(wait=tenacity.wait_fixed(1),
-                stop=tenacity.stop_after_delay(60),
+                stop=tenacity.stop_after_delay(120),
                 reraise=True)
 def wait_machine(address, port=22):
     address = socket.gethostbyname(address)

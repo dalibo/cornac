@@ -7,10 +7,9 @@ from concurrent.futures import ThreadPoolExecutor
 from textwrap import dedent
 from uuid import uuid4
 
-from flask import Flask, abort, make_response, request
+from flask import abort, make_response, request
 from jinja2 import Template
 
-from .config import make_poc_config
 from .operator import (
     LibVirtConnection,
     LibVirtIaaS,
@@ -20,8 +19,7 @@ from .operator import (
 
 # Setup logging before instanciating Flask app.
 logging.basicConfig(format="%(levelname)5.5s %(message)s", level=logging.DEBUG)
-
-app = Flask(__name__)
+from .app import app  # noqa
 logger = logging.getLogger(__name__)
 
 # Fake in-memory database.
@@ -80,13 +78,12 @@ def task(func):
 def create_db_task(command):
     # Background task to trigger operator and update global in-memory database.
 
-    config = make_poc_config()
     if command['DBInstanceIdentifier'] not in INSTANCES:
         raise Exception("Unknown instance")
 
     with LibVirtConnection() as conn:
-        iaas = LibVirtIaaS(conn, config)
-        operator = SocleOperator(iaas, config)
+        iaas = LibVirtIaaS(conn, app.config)
+        operator = SocleOperator(iaas, app.config)
         response = operator.create_db_instance(command)
 
     instance = INSTANCES[command['DBInstanceIdentifier']]
