@@ -81,13 +81,15 @@ def create_db_task(command):
     # Background task to trigger operator and update global in-memory database.
 
     config = make_poc_config()
-    instance = INSTANCES[command['DBInstanceIdentifier']]
+    if command['DBInstanceIdentifier'] not in INSTANCES:
+        raise Exception("Unknown instance")
 
     with LibVirtConnection() as conn:
         iaas = LibVirtIaaS(conn, config)
         operator = SocleOperator(iaas, config)
         response = operator.create_db_instance(command)
 
+    instance = INSTANCES[command['DBInstanceIdentifier']]
     instance.status = 'running'
     instance.endpoint_address = response['Endpoint']['Address']
 
