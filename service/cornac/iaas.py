@@ -2,6 +2,7 @@
 #
 
 import logging
+import os
 import shlex
 import socket
 import subprocess
@@ -74,25 +75,8 @@ class LibVirtIaaS(object):
 
         return LibVirtMachine(name=newname, domain=domain)
 
-    def create_disk(self, name, size):
-        pool = self.conn.listAllStoragePools()[0]
-
-        try:
-            disk = pool.storageVolLookupByName(name)
-        except libvirt.libvirtError:
-            pass
-        else:
-            logger.debug("Reusing disk %s.", name)
-            return disk
-
-        # For now, just clone definition of first disk found in pool. Including
-        # size.
-        vol0 = pool.listAllVolumes()[0]
-        oldxml = vol0.XMLDesc()
-        newxml = oldxml.replace(vol0.name(), name)
-
-        logger.debug("Creating disk %s.", name)
-        return pool.createXML(newxml)
+    def get_pool(self, name):
+        return LibVirtStoragePool(self.conn.storagePoolLookupByName(name))
 
     def endpoint(self, machine):
         # Let's DNS resolve machine IP for now.
@@ -147,6 +131,38 @@ class LibVirtMachine(object):
         state, _ = self.domain.state()
         if libvirt.VIR_DOMAIN_RUNNING != state:
             raise Exception("%s is not running" % self.name)
+
+
+class LibVirtStoragePool(object):
+    def __init__(self, pool):
+        self.pool = pool
+
+    def __repr__(self):
+        return '<%s %s>' % (self.__class__.__name__, self.pool.name())
+
+    def create_disk(self, name, size):
+        try:
+            disk = self.pool.storageVolLookupByName(name)
+        except libvirt.libvirtError:
+            pass
+        else:
+            logger.debug("Reusing disk %s.", name)
+            return disk
+
+        # For now, just clone definition of first disk found in pool.
+        vol0 = self.pool.listAllVolumes()[0]
+        xvol = ET.fromstring(vol0.XMLDesc())
+        xvol.find('./name').text = name
+        xkey = xvol.find('./key')
+        xkey.text = os.path.dirname(xkey.text) + "/" + name
+        xvol.find('./target/path').text = xkey.text
+        xvol.find('./capacity').text = "%d" % size
+        # Prallocate 256K, for partition, PV metadata and mkfs.
+        xvol.find('./allocation').text = "%d" % (256 * 1024,)
+        xvol.remove(xvol.find('./physical'))
+
+        logger.debug("Creating disk %s.", name)
+        return self.pool.createXML(ET.tostring(xvol, encoding='unicode'))
 
 
 def logged_cmd(cmd, *a, **kw):

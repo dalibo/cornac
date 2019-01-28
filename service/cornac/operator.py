@@ -39,10 +39,10 @@ class SocleOperator(object):
         name = f"cornac-{command['DBInstanceIdentifier']}"
         origin = self.config['original_machine']
         machine = self.iaas.create_machine(newname=name, origin=origin)
-
-        disk = self.iaas.create_disk(
+        storage_pool = self.iaas.get_pool(self.config['storage_pool'])
+        disk = storage_pool.create_disk(
             name=f'{name}-data.qcow2',
-            size=command['AllocatedStorage'] * _1G,
+            size=int(command['AllocatedStorage'] * _1G),
         )
         machine.attach_disk(disk)
         machine.start()
@@ -100,7 +100,7 @@ def test_main():
     # What aws would send to REST API.
     command = {
         'DBInstanceIdentifier': 'cli0',
-        'AllocatedStorage': '5',
+        'AllocatedStorage': 5,
         'DBInstanceClass': 'db.t2.micro',
         'Engine': 'postgres',
         'MasterUsername': 'postgres',
