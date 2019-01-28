@@ -1,0 +1,4 @@
+DNS_DOMAIN = ''
+ORIGINAL_MACHINE = 'base-cornac'
+STORAGE_POOL = 'default'
+ROOT_PUBLIC_KEY = None

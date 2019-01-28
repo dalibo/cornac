@@ -9,7 +9,6 @@ import pdb
 import sys
 
 
-from .config import make_poc_config
 from .iaas import (
     LibVirtConnection,
     LibVirtIaaS,
@@ -37,9 +36,9 @@ class SocleOperator(object):
 
     def create_db_instance(self, command):
         name = f"cornac-{command['DBInstanceIdentifier']}"
-        origin = self.config['original_machine']
+        origin = self.config['ORIGINAL_MACHINE']
         machine = self.iaas.create_machine(newname=name, origin=origin)
-        storage_pool = self.iaas.get_pool(self.config['storage_pool'])
+        storage_pool = self.iaas.get_pool(self.config['STORAGE_POOL'])
         disk = storage_pool.create_disk(
             name=f'{name}-data.qcow2',
             size=int(command['AllocatedStorage'] * _1G),
@@ -96,7 +95,8 @@ class SocleOperator(object):
 def test_main():
     # Hard coded real test case, for PoC development.
 
-    config = make_poc_config()
+    from .app import config
+
     # What aws would send to REST API.
     command = {
         'DBInstanceIdentifier': 'cli0',
