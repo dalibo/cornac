@@ -90,12 +90,3 @@
       key: '{{ item.key }}'
       value: '{{ item.value }}'
       reload: yes
-
-  # postgres user must have a SSH key for replication
-
-  - name: generate SSH key
-    tags: ssh
-    user:
-      name: postgres
-      state: present
-      generate_ssh_key: yes
