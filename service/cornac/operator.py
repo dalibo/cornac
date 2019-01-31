@@ -3,11 +3,10 @@
 # The concept of Operator is borrowed from K8S.
 #
 
-import json
 import logging
 import pdb
 import sys
-
+from pathlib import Path
 
 from .iaas import (
     LibVirtConnection,
@@ -23,16 +22,15 @@ logger = logging.getLogger(__name__)
 _1G = 1024 * 1024 * 1024
 
 
-class SocleOperator(object):
-    # Implementation using Dalibo Python scripts and a IaaS.
+class BasicOperator(object):
+    # Implementation using pghelper.sh
 
     def __init__(self, iaas, config):
         self.iaas = iaas
         self.config = config
         # Configuration keys:
         #
-        # original_machine: name of the template machine with Postgres and
-        #                   Dalibo's scripts installed.
+        # original_machine: name of the template machine with Postgres.
 
     def create_db_instance(self, command):
         name = f"cornac-{command['DBInstanceIdentifier']}"
@@ -49,42 +47,42 @@ class SocleOperator(object):
         wait_machine(address)
         shell = RemoteShell('root', address)
 
-        # Creating instance
+        logger.debug("Sending helper script.")
+        local_helper = str(Path(__file__).parent / 'pghelper.sh')
+        helper = '/usr/local/bin/pghelper.sh'
+        shell.copy(local_helper, helper)
+
+        # Formatting disk
         try:
-            shell(["test", "-d", "/var/lib/pgsql/11/main/data_mnt/data/"])
+            # Check whether Postgres VG is configured.
+            shell(["test", "-d", "/dev/Postgres"])
         except Exception:
-            pass
-            input_json = dict(
-                backup_password="C0nfidentiel",
-                replication_password="C0nfidentiel",
-                superuser_password=command["MasterUserPassword"],
-            )
+            dev = disk.guess_device_on_guest()
+            shell([helper, "prepare-disk", dev])
             shell([
-                "create_instance.py", "/dev/sda", "--force",
-                "--input-json", json.dumps(input_json),
-                "--surole-in-pgpass",
-            ], raise_stdout=True)
+                helper, "create-instance",
+                command['EngineVersion'],
+                command['DBInstanceIdentifier'],
+            ])
+            shell([helper, "start"])
         else:
             logger.debug("Reusing Postgres instance.")
 
+        # Master user
+        master = command['MasterUsername']
+        shell([
+            helper,
+            "create-masteruser", master, command['MasterUserPassword'],
+        ])
+
         # Creating database
-        supg = ["sudo", "-u", "postgres"]
-        bases = shell(supg + ["psql", "-l"])
+        bases = shell([helper, "psql", "-l"])
         dbname = command['DBInstanceIdentifier']
         if f"\n {dbname} " in bases:
             logger.debug("Reusing database %s.", dbname)
         else:
             logger.debug("Creating database %s.", dbname)
-            shell(
-                supg + ["create_database.py", dbname, "--force"],
-                raise_stdout=True,
-            )
-
-        # Allowing connect from any IP.
-        shell(supg + [
-            "alter_role.py", "postgres", dbname,
-            "--version=11", "--client-ips=0.0.0.0/0",
-        ], raise_stdout=True)
+            shell([helper, "create-database", dbname, master])
 
         return dict(
             Endpoint=dict(Address=address, Port=5432),
@@ -103,13 +101,14 @@ def test_main():
         'AllocatedStorage': 5,
         'DBInstanceClass': 'db.t2.micro',
         'Engine': 'postgres',
+        'EngineVersion': '11',
         'MasterUsername': 'postgres',
         'MasterUserPassword': 'C0nfidentiel',
     }
 
     with LibVirtConnection() as conn:
         iaas = LibVirtIaaS(conn, config)
-        operator = SocleOperator(iaas, config)
+        operator = BasicOperator(iaas, config)
         response = operator.create_db_instance(command)
 
     logger.info(

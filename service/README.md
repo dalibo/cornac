@@ -10,7 +10,7 @@ Prerequisites:
 - Resolution of VM with domain `.virt`.
 - SSH agent up and running.
 - libvirt unattended access.
-- a VM called `base-cornac` with Postgres 11 and Dalibo's Scripts.
+- a VM called `base-cornac` with Postgres 11.
 
 
 Quick setup:
