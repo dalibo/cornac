@@ -28,6 +28,32 @@ class LibVirtConnection(object):
         self.conn.close()
 
 
+class LibVirtDisk(object):
+    def __init__(self, handle):
+        self.handle = handle
+        self.machine = None
+
+    def guess_device_on_guest(self):
+        # Guess /dev/disk/by-path/… device file from XML.
+        xml = self.machine.domain.XMLDesc()
+        xml = ET.fromstring(xml)
+        xdiskaddress = xml.find(
+            f".//disk/source[@file='{self.handle.path()}']/../address")
+        xcontrolleraddress = xml.find(
+            ".//controller[@type='scsi']/address[@type='pci']")
+        pci_path = 'pci-{domain:04d}:{bus:02d}:{slot:02d}.{function}'.format(
+            bus=int(xcontrolleraddress.attrib['bus'], base=0),
+            domain=int(xcontrolleraddress.attrib['domain'], base=0),
+            function=int(xcontrolleraddress.attrib['function'], base=0),
+            slot=int(xcontrolleraddress.attrib['slot'], base=0),
+        )
+        # cf.
+        # https://cgit.freedesktop.org/systemd/systemd/tree/src/udev/udev-builtin-path_id.c#n405
+        scsi_path = 'scsi-{controller}:{bus}:{target}:{unit}'.format(
+            **xdiskaddress.attrib)
+        return f'/dev/disk/by-path/{pci_path}-{scsi_path}'
+
+
 class LibVirtIaaS(object):
     # Uses libvirt binding, virt-manager and guestfs tools to manage VM.
     # Current purpose is PoC.
@@ -102,7 +128,8 @@ class LibVirtMachine(object):
 
     def attach_disk(self, disk):
         xml = self.domain.XMLDesc()
-        path = disk.path()
+        path = disk.handle.path()
+        disk.machine = self
         if path in xml:
             logger.debug("Disk %s already attached to %s.", path, self.name)
             return
@@ -150,7 +177,7 @@ class LibVirtStoragePool(object):
             pass
         else:
             logger.debug("Reusing disk %s.", name)
-            return disk
+            return LibVirtDisk(disk)
 
         # For now, just clone definition of first disk found in pool.
         vol0 = self.pool.listAllVolumes()[0]
@@ -165,7 +192,8 @@ class LibVirtStoragePool(object):
         xvol.remove(xvol.find('./physical'))
 
         logger.debug("Creating disk %s.", name)
-        return self.pool.createXML(ET.tostring(xvol, encoding='unicode'))
+        handle = self.pool.createXML(ET.tostring(xvol, encoding='unicode'))
+        return LibVirtDisk(handle)
 
 
 def logged_cmd(cmd, *a, **kw):
