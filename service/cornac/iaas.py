@@ -221,11 +221,11 @@ def logged_cmd(cmd, *a, **kw):
 
 class RemoteShell(object):
     def __init__(self, user, host):
-        self.ssh = ["ssh", "-l", user, host]
+        self.ssh = ["ssh", "-l", user, host, "-q"]
 
-    def __call__(self, command, raise_stdout=False):
+    def __call__(self, command):
         try:
             return logged_cmd(self.ssh + [shlex.quote(i) for i in command])
         except subprocess.CalledProcessError as e:
-            # For bad script writing errors in stdout.
-            raise Exception(e.stdout if raise_stdout else e.stderr)
+            # SSH shows stderr in stdout.
+            raise Exception(e.stdout)
