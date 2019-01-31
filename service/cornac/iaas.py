@@ -222,6 +222,7 @@ def logged_cmd(cmd, *a, **kw):
 class RemoteShell(object):
     def __init__(self, user, host):
         self.ssh = ["ssh", "-l", user, host, "-q"]
+        self.scp_target_prefix = f"{user}@{host}:"
 
     def __call__(self, command):
         try:
@@ -229,3 +230,9 @@ class RemoteShell(object):
         except subprocess.CalledProcessError as e:
             # SSH shows stderr in stdout.
             raise Exception(e.stdout)
+
+    def copy(self, src, dst):
+        try:
+            return logged_cmd(["scp", src, self.scp_target_prefix + dst])
+        except subprocess.CalledProcessError as e:
+            raise Exception(e.stderr)
