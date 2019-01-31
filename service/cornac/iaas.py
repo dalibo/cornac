@@ -7,6 +7,7 @@ import shlex
 import socket
 import subprocess
 from copy import deepcopy
+from string import ascii_lowercase
 from xml.etree import ElementTree as ET
 
 import libvirt
@@ -112,12 +113,14 @@ class LibVirtMachine(object):
         xdisk = deepcopy(xdisk0)
         xsrc = xdisk.find('./source')
         xsrc.attrib['file'] = path
+        xscsitargets = xml.findall(".//disk/target[@bus='scsi']")
+        devs = [e.attrib['dev'] for e in xscsitargets]
         xtarget = xdisk.find('./target')
-        xtarget.attrib['bus'] = 'scsi'
-        xtarget.attrib['dev'] = 'sda'
+        xtarget.attrib['dev'] = 'sd' + ascii_lowercase[len(devs)]
+        xtarget.tail = xtarget.tail[:-2]  # Remove one indent level.
         xdisk.remove(xdisk.find('./address'))
         # Try to place disk after first one.
-        xdevices.insert(2, xdisk)
+        xdevices.insert(1 + len(devs), xdisk)
 
         xml = ET.tostring(xml, encoding="unicode")
         logger.debug("Attaching disk %s.", path)
