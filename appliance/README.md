@@ -1,10 +1,8 @@
 # Postgres VM provisionning
 
 
-cornac provide a generic Ansible playbook to deploy Postgres on a YUM-based
-distribution.
-
-Cornac requirement is Ansible.
+Cornac appliance provides generic Ansible playbooks to deploy Postgres on a
+YUM-based distribution.
 
 
 ## Targeting Deployment
@@ -15,12 +13,6 @@ By default, cornac does not require any host in inventory. It fallbacks to
 
 ``` console
 $ ansible-playbook install.yml -e host=myhost
-...
-PLAY RECAP *****************************************************************
-localhost                  : ok=2    changed=0    unreachable=0    failed=0
-myhost                     : ok=8    changed=0    unreachable=0    failed=0
-
-$ CORNAC_HOST=myhost ansible-playbook install.yml
 ...
 PLAY RECAP *****************************************************************
 localhost                  : ok=2    changed=0    unreachable=0    failed=0

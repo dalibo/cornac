@@ -1,4 +1,40 @@
 ---
+# Variables in playbook group_vars/all are overloaded by inventory
+# group_vars/cornac. Cf.
+# https://docs.ansible.com/ansible/latest/user_guide/playbooks_variables.html#variable-precedence-where-should-i-put-a-variable
+
+cornac_packages_stage1:
+- epel-release
+- https://download.postgresql.org/pub/repos/yum/11/redhat/rhel-7-x86_64/pgdg-centos11-11-2.noarch.rpm
+- https://download.postgresql.org/pub/repos/yum/10/redhat/rhel-7-x86_64/pgdg-centos10-10-2.noarch.rpm
+- https://download.postgresql.org/pub/repos/yum/9.6/redhat/rhel-7-x86_64/pgdg-centos96-9.6-3.noarch.rpm
+cornac_packages_stage2:
+- pgbouncer
+- postgresql11
+- postgresql11-contrib
+- postgresql11-debuginfo
+- postgresql11-libs
+- postgresql11-plperl
+- postgresql11-plpython
+- postgresql11-pltcl
+- postgresql11-server
+- postgresql10
+- postgresql10-contrib
+- postgresql10-debuginfo
+- postgresql10-libs
+- postgresql10-plperl
+- postgresql10-plpython
+- postgresql10-pltcl
+- postgresql10-server
+- postgresql96
+- postgresql96-contrib
+- postgresql96-debuginfo
+- postgresql96-libs
+- postgresql96-plperl
+- postgresql96-plpython
+- postgresql96-pltcl
+- postgresql96-server
+- rsync
 cornac_sysctl_defaults:
   vm.overcommit_memory: 0
   vm.zone_reclaim_mode: 0

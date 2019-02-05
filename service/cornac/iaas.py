@@ -7,6 +7,7 @@ import shlex
 import socket
 import subprocess
 from copy import deepcopy
+from string import ascii_lowercase
 from xml.etree import ElementTree as ET
 
 import libvirt
@@ -25,6 +26,32 @@ class LibVirtConnection(object):
 
     def __exit__(self, *a):
         self.conn.close()
+
+
+class LibVirtDisk(object):
+    def __init__(self, handle):
+        self.handle = handle
+        self.machine = None
+
+    def guess_device_on_guest(self):
+        # Guess /dev/disk/by-path/… device file from XML.
+        xml = self.machine.domain.XMLDesc()
+        xml = ET.fromstring(xml)
+        xdiskaddress = xml.find(
+            f".//disk/source[@file='{self.handle.path()}']/../address")
+        xcontrolleraddress = xml.find(
+            ".//controller[@type='scsi']/address[@type='pci']")
+        pci_path = 'pci-{domain:04d}:{bus:02d}:{slot:02d}.{function}'.format(
+            bus=int(xcontrolleraddress.attrib['bus'], base=0),
+            domain=int(xcontrolleraddress.attrib['domain'], base=0),
+            function=int(xcontrolleraddress.attrib['function'], base=0),
+            slot=int(xcontrolleraddress.attrib['slot'], base=0),
+        )
+        # cf.
+        # https://cgit.freedesktop.org/systemd/systemd/tree/src/udev/udev-builtin-path_id.c#n405
+        scsi_path = 'scsi-{controller}:{bus}:{target}:{unit}'.format(
+            **xdiskaddress.attrib)
+        return f'/dev/disk/by-path/{pci_path}-{scsi_path}'
 
 
 class LibVirtIaaS(object):
@@ -101,7 +128,8 @@ class LibVirtMachine(object):
 
     def attach_disk(self, disk):
         xml = self.domain.XMLDesc()
-        path = disk.path()
+        path = disk.handle.path()
+        disk.machine = self
         if path in xml:
             logger.debug("Disk %s already attached to %s.", path, self.name)
             return
@@ -112,12 +140,14 @@ class LibVirtMachine(object):
         xdisk = deepcopy(xdisk0)
         xsrc = xdisk.find('./source')
         xsrc.attrib['file'] = path
+        xscsitargets = xml.findall(".//disk/target[@bus='scsi']")
+        devs = [e.attrib['dev'] for e in xscsitargets]
         xtarget = xdisk.find('./target')
-        xtarget.attrib['bus'] = 'scsi'
-        xtarget.attrib['dev'] = 'sda'
+        xtarget.attrib['dev'] = 'sd' + ascii_lowercase[len(devs)]
+        xtarget.tail = xtarget.tail[:-2]  # Remove one indent level.
         xdisk.remove(xdisk.find('./address'))
         # Try to place disk after first one.
-        xdevices.insert(2, xdisk)
+        xdevices.insert(1 + len(devs), xdisk)
 
         xml = ET.tostring(xml, encoding="unicode")
         logger.debug("Attaching disk %s.", path)
@@ -147,7 +177,7 @@ class LibVirtStoragePool(object):
             pass
         else:
             logger.debug("Reusing disk %s.", name)
-            return disk
+            return LibVirtDisk(disk)
 
         # For now, just clone definition of first disk found in pool.
         vol0 = self.pool.listAllVolumes()[0]
@@ -162,7 +192,8 @@ class LibVirtStoragePool(object):
         xvol.remove(xvol.find('./physical'))
 
         logger.debug("Creating disk %s.", name)
-        return self.pool.createXML(ET.tostring(xvol, encoding='unicode'))
+        handle = self.pool.createXML(ET.tostring(xvol, encoding='unicode'))
+        return LibVirtDisk(handle)
 
 
 def logged_cmd(cmd, *a, **kw):
@@ -190,11 +221,18 @@ def logged_cmd(cmd, *a, **kw):
 
 class RemoteShell(object):
     def __init__(self, user, host):
-        self.ssh = ["ssh", "-l", user, host]
+        self.ssh = ["ssh", "-l", user, host, "-q"]
+        self.scp_target_prefix = f"{user}@{host}:"
 
-    def __call__(self, command, raise_stdout=False):
+    def __call__(self, command):
         try:
             return logged_cmd(self.ssh + [shlex.quote(i) for i in command])
         except subprocess.CalledProcessError as e:
-            # For bad script writing errors in stdout.
-            raise Exception(e.stdout if raise_stdout else e.stderr)
+            # SSH shows stderr in stdout.
+            raise Exception(e.stdout)
+
+    def copy(self, src, dst):
+        try:
+            return logged_cmd(["scp", src, self.scp_target_prefix + dst])
+        except subprocess.CalledProcessError as e:
+            raise Exception(e.stderr)
