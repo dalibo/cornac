@@ -11,6 +11,8 @@ from pathlib import Path
 from .iaas import (
     LibVirtConnection,
     LibVirtIaaS,
+)
+from .ssh import (
     RemoteShell,
     wait_machine,
 )
