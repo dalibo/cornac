@@ -8,7 +8,7 @@ import pdb
 import sys
 from pathlib import Path
 
-from .iaas import (
+from .iaas.libvirt import (
     LibVirtConnection,
     LibVirtIaaS,
 )
