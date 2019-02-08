@@ -59,3 +59,11 @@ class RemoteShell(object):
             return logged_cmd(["scp", src, self.scp_target_prefix + dst])
         except subprocess.CalledProcessError as e:
             raise Exception(e.stderr)
+
+    @tenacity.retry(wait=tenacity.wait_fixed(1),
+                    stop=tenacity.stop_after_delay(120),
+                    reraise=True)
+    def wait(self):
+        # Just ping with true to trigger SSH. This method allows Host rewrite
+        # in ssh_config.
+        self(["true"])
