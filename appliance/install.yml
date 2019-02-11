@@ -16,6 +16,15 @@
 - hosts: cornac
   become: yes
   tasks:
+  - name: inject deployment key
+    tags: deploy
+    loop: "{{ cornac_deployment_keys|default([]) }}"
+    authorized_key:
+      key: "{{ item }}"
+      manage_dir: yes
+      state: present
+      user: "{{ cornac_deployment_user|default('root') }}"
+
   - name: install rpm-python for Ansible
     tags: yum
     # env is just a hack to avoid Ansible warning.

@@ -278,9 +278,15 @@ start() {
 }
 
 
-if type -t $1 | grep -q function ; then
-	fn=$1; shift
-	$fn "$@"
+
+
+cmd=help
+if [ -n "${1-}" ] ; then
+	cmd=$1; shift
+fi
+
+if type -t ${cmd} | grep -q function ; then
+	$cmd "$@"
 else
 	echo "Unknown command $1." >&2
 	exit 1
