@@ -9,17 +9,10 @@ import sys
 from pathlib import Path
 
 from .iaas import IaaS
-
-from .ssh import (
-    RemoteShell,
-    wait_machine,
-)
+from .ssh import RemoteShell
 
 
 logger = logging.getLogger(__name__)
-
-
-_1G = 1024 * 1024 * 1024
 
 
 class BasicOperator(object):
@@ -34,19 +27,15 @@ class BasicOperator(object):
 
     def create_db_instance(self, command):
         name = f"cornac-{command['DBInstanceIdentifier']}"
-        origin = self.config['ORIGINAL_MACHINE']
-        machine = self.iaas.create_machine(newname=name, origin=origin)
-        storage_pool = self.iaas.get_pool(self.config['STORAGE_POOL'])
-        disk = storage_pool.create_disk(
-            name=f'{name}-data.qcow2',
-            size=int(command['AllocatedStorage'] * _1G),
+        machine = self.iaas.create_machine(
+            name=name,
+            storage_pool=self.config['STORAGE_POOL'],
+            data_size_gb=command['AllocatedStorage'],
         )
-        machine.attach_disk(disk)
-        machine.start()
+        self.iaas.start(machine)
         address = self.iaas.endpoint(machine)
-        wait_machine(address)
         shell = RemoteShell('root', address)
-
+        shell.wait()
         logger.debug("Sending helper script.")
         local_helper = str(Path(__file__).parent / 'pghelper.sh')
         helper = '/usr/local/bin/pghelper.sh'
@@ -57,7 +46,7 @@ class BasicOperator(object):
             # Check whether Postgres VG is configured.
             shell(["test", "-d", "/dev/Postgres"])
         except Exception:
-            dev = disk.guess_device_on_guest()
+            dev = self.iaas.guess_data_device_in_guest(machine)
             shell([helper, "prepare-disk", dev])
             shell([
                 helper, "create-instance",
