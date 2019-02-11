@@ -1,5 +1,8 @@
-# API to manage machine, disks, networks, etc.
+# Implementation of IaaS based on libvirt tools.
 #
+# Uses libvirt binding, virt-manager and guestfs tools to manage VM.
+# Current purpose is PoC or development.
+
 
 import logging
 import os
@@ -10,7 +13,7 @@ from xml.etree import ElementTree as ET
 import libvirt
 
 from . import IaaS
-from cornac.ssh import logged_cmd
+from ..ssh import logged_cmd
 
 
 logger = logging.getLogger(__name__)
@@ -20,9 +23,6 @@ _1G = 1024 * 1024 * 1024
 
 
 class LibVirtIaaS(IaaS):
-    # Uses libvirt binding, virt-manager and guestfs tools to manage VM.
-    # Current purpose is PoC.
-
     @classmethod
     def connect(cls, url, config):
         return cls(libvirt.open(), config)
@@ -32,9 +32,9 @@ class LibVirtIaaS(IaaS):
         self.config = config
         # Configuration Keys:
         #
-        # root_ssh_public_key: SSH public key to inject to access root account
-        #                      on new machines.
-        # dns_domain: DNS domain to build FQDN of machine on the IaaS.
+        # ROOT_PUBLIC_KEY: SSH public key to inject to access root account
+        #                  on new machines.
+        # DNS_DOMAIN: DNS domain to build FQDN of machine on the IaaS.
 
     def attach_disk(self, domain, disk):
         xml = domain.XMLDesc()
@@ -91,7 +91,7 @@ class LibVirtIaaS(IaaS):
         logger.debug("Creating disk %s.", name)
         return pool.createXML(ET.tostring(xvol, encoding='unicode'))
 
-    def create_machine(self, name, storage_pool, data_size_gb):
+    def create_machine(self, name, storage_pool, data_size_gb, **kw):
         # The PoC reuses ressources until we have persistence of objects.
         try:
             domain = self.conn.lookupByName(name)
@@ -129,6 +129,10 @@ class LibVirtIaaS(IaaS):
 
         return domain
 
+    def endpoint(self, domain):
+        # Let's DNS resolve machine IP for now.
+        return domain.name() + self.config['DNS_DOMAIN']
+
     def guess_data_device_in_guest(self, machine):
         # Guess /dev/disk/by-path/… device file from XML.
         xml = ET.fromstring(machine.XMLDesc())
@@ -162,7 +166,3 @@ class LibVirtIaaS(IaaS):
         state, _ = domain.state()
         if libvirt.VIR_DOMAIN_RUNNING != state:
             raise Exception("%s is not running" % domain.name())
-
-    def endpoint(self, domain):
-        # Let's DNS resolve machine IP for now.
-        return domain.name() + self.config['DNS_DOMAIN']
