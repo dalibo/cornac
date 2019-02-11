@@ -9,21 +9,11 @@ from xml.etree import ElementTree as ET
 
 import libvirt
 
+from . import IaaS
 from cornac.ssh import logged_cmd
 
 
 logger = logging.getLogger(__name__)
-
-
-class LibVirtConnection(object):
-    # Context manager for libvirt.open().
-
-    def __enter__(self):
-        self.conn = libvirt.open()
-        return self.conn
-
-    def __exit__(self, *a):
-        self.conn.close()
 
 
 class LibVirtDisk(object):
@@ -52,9 +42,13 @@ class LibVirtDisk(object):
         return f'/dev/disk/by-path/{pci_path}-{scsi_path}'
 
 
-class LibVirtIaaS(object):
+class LibVirtIaaS(IaaS):
     # Uses libvirt binding, virt-manager and guestfs tools to manage VM.
     # Current purpose is PoC.
+
+    @classmethod
+    def connect(cls, url, config):
+        return cls(libvirt.open(), config)
 
     def __init__(self, conn, config):
         self.conn = conn
@@ -64,6 +58,9 @@ class LibVirtIaaS(object):
         # root_ssh_public_key: SSH public key to inject to access root account
         #                      on new machines.
         # dns_domain: DNS domain to build FQDN of machine on the IaaS.
+
+    def close(self):
+        self.conn.close()
 
     def create_machine(self, newname, origin):
         # The PoC reuses ressources until we have persistence of objects.

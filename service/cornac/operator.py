@@ -8,10 +8,8 @@ import pdb
 import sys
 from pathlib import Path
 
-from .iaas.libvirt import (
-    LibVirtConnection,
-    LibVirtIaaS,
-)
+from .iaas import IaaS
+
 from .ssh import (
     RemoteShell,
     wait_machine,
@@ -108,8 +106,7 @@ def test_main():
         'MasterUserPassword': 'C0nfidentiel',
     }
 
-    with LibVirtConnection() as conn:
-        iaas = LibVirtIaaS(conn, config)
+    with IaaS.connect(config['IAAS'], config) as iaas:
         operator = BasicOperator(iaas, config)
         response = operator.create_db_instance(command)
 
