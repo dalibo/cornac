@@ -6,6 +6,9 @@ setup(
     install_requires=[
         "flask",
         "tenacity",
-        "libvirt-python",
     ],
+    extras_require={
+        'libvirt': ["libvirt-python"],
+        'vmware': ["pyvmomi"],
+    },
 )

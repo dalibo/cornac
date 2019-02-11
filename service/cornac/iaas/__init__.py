@@ -9,6 +9,7 @@ class IaaS(object):
         # third-party library. The module path has the same format of
         # setuptools entrypoint.
         'libvirt': __name__ + '.libvirt:LibVirtIaaS',
+        'vcenter': __name__ + '.vcenter:vCenter',
     }
 
     @classmethod
