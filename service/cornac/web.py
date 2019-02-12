@@ -10,11 +10,8 @@ from uuid import uuid4
 from flask import abort, make_response, request
 from jinja2 import Template
 
-from .operator import (
-    LibVirtConnection,
-    LibVirtIaaS,
-    SocleOperator,
-)
+from .iaas import IaaS
+from .operator import BasicOperator
 
 
 # Setup logging before instanciating Flask app.
@@ -81,9 +78,8 @@ def create_db_task(command):
     if command['DBInstanceIdentifier'] not in INSTANCES:
         raise Exception("Unknown instance")
 
-    with LibVirtConnection() as conn:
-        iaas = LibVirtIaaS(conn, app.config)
-        operator = SocleOperator(iaas, app.config)
+    with IaaS.connect(app.config['IAAS'], app.config) as iaas:
+        operator = BasicOperator(iaas, app.config)
         response = operator.create_db_instance(command)
 
     instance = INSTANCES[command['DBInstanceIdentifier']]
