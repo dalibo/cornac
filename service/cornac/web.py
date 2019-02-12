@@ -94,6 +94,9 @@ class RDS(object):
     # XML snippet.
 
     workerpool = ThreadPoolExecutor(max_workers=4)
+    default_create_command = dict(
+        EngineVersion='11',
+    )
 
     @classmethod
     def CreateDBInstance(cls, command):
@@ -102,7 +105,7 @@ class RDS(object):
             status='creating',
         )
         INSTANCES[instance.identifier] = instance
-        command = command.copy()
+        command = dict(cls.default_create_command, **command)
         command['AllocatedStorage'] = int(command['AllocatedStorage'])
         cls.workerpool.submit(create_db_task, command)
         return instance.as_xml()
