@@ -3,10 +3,12 @@
 The Cornac webservice is an open-source implementation of AWS RDS API enabling
 the use of aws CLI to manage your Postgres instances.
 
+**⚠ This project is at its early stage of development. ⚠**
+
 
 ## Features
 
-- RDS-like API compatible with awscli.
+- Subset of RDS API compatible with awscli.
 - Configurable infastructure provider: libvirt, VMWare.
 
 
@@ -19,18 +21,23 @@ Cornac webservice has the following prerequisites:
   resolvable domain for virtual machines.
 - a template VM called `base-cornac` with Postgres 11.
 
+The `CORNAC_SETTINGS` environment variable point to a python file containing
+regular Flask configuration and cornac configuration. [Default cornac
+configuration](cornac/default_config.py) is commented. A [poc.cfg](poc.cfg)
+configuration file can be a good starting point.
+
 Further prerequisites depends on the infrastructure provider.
 
 
 ### libvirt Prerequisites
 
-To use libvirt operator, install cornac with `libvirt` extra:
+To use libvirt infrastructure, install cornac with `libvirt` extra:
 
 ``` console
 $ pip install -e .[libvirt]
 ```
 
-libvirt operator has the following prerequisites.
+libvirt infrastructure has the following prerequisites.
 
 - libvirt-daemon, virtinst and libguestfs-tools installed.
 - libvirt unattended access.
@@ -38,20 +45,26 @@ libvirt operator has the following prerequisites.
 
 ### VMWare Prerequisites
 
-To use VMWare operator, install cornac with `vmware` extra:
+To use VMWare infrastructure, install cornac with `vmware` extra:
 
 ``` console
 $ pip install -e .[vmware]
 ```
 
-You must now configure `IAAS` parameter with the form:
-`vcenter+https://user@sso.local:password@host/?no_verify=1`.
+You must now configure `IAAS` parameter with the form like:
+
+``` python
+IAAS = "vcenter+https://user@sso.local:password@host/?no_verify=1"
+```
 
 
 ## Building the Template VM
 
+Cornac webservice clone a template to provision a new Postgres host. You must
+prepare this VM before calling cornac API.
+
 - Create a CentOS7 VM, usually named `base-cornac`.
-- For VMWare, inject the SSH public key for root user.
+- Inject the SSH public key for root user.
 - Use `install.yml` playbook from `appliance/` directory to provision the VM. On
   vSphere, add the `vmware` feature.
 
