@@ -59,7 +59,9 @@ def task(func):
     def task_wrapper(*a, **kw):
         logger.info("Running task %s.", func.__name__)
         try:
-            return func(*a, **kw)
+            ret = func(*a, **kw)
+            logger.info("Task %s done.", func.__name__)
+            return ret
         except pdb.bdb.BdbQuit:
             pass
         except Exception:
