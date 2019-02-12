@@ -32,9 +32,14 @@ def logged_cmd(cmd, *a, **kw):
     return out
 
 
-@tenacity.retry(wait=tenacity.wait_fixed(1),
-                stop=tenacity.stop_after_delay(120),
-                reraise=True)
+remote_retry = tenacity.retry(
+    wait=tenacity.wait_chain(
+        [tenacity.wait_fixed(8) + tenacity.wait_fixed(1)]),
+    stop=tenacity.stop_after_delay(120),
+    reraise=True)
+
+
+@remote_retry
 def wait_machine(address, port=22):
     address = socket.gethostbyname(address)
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -60,9 +65,7 @@ class RemoteShell(object):
         except subprocess.CalledProcessError as e:
             raise Exception(e.stderr)
 
-    @tenacity.retry(wait=tenacity.wait_fixed(1),
-                    stop=tenacity.stop_after_delay(120),
-                    reraise=True)
+    @remote_retry
     def wait(self):
         # Just ping with true to trigger SSH. This method allows Host rewrite
         # in ssh_config.

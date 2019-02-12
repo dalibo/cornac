@@ -10,11 +10,8 @@ from uuid import uuid4
 from flask import abort, make_response, request
 from jinja2 import Template
 
-from .operator import (
-    LibVirtConnection,
-    LibVirtIaaS,
-    SocleOperator,
-)
+from .iaas import IaaS
+from .operator import BasicOperator
 
 
 # Setup logging before instanciating Flask app.
@@ -62,7 +59,9 @@ def task(func):
     def task_wrapper(*a, **kw):
         logger.info("Running task %s.", func.__name__)
         try:
-            return func(*a, **kw)
+            ret = func(*a, **kw)
+            logger.info("Task %s done.", func.__name__)
+            return ret
         except pdb.bdb.BdbQuit:
             pass
         except Exception:
@@ -81,9 +80,8 @@ def create_db_task(command):
     if command['DBInstanceIdentifier'] not in INSTANCES:
         raise Exception("Unknown instance")
 
-    with LibVirtConnection() as conn:
-        iaas = LibVirtIaaS(conn, app.config)
-        operator = SocleOperator(iaas, app.config)
+    with IaaS.connect(app.config['IAAS'], app.config) as iaas:
+        operator = BasicOperator(iaas, app.config)
         response = operator.create_db_instance(command)
 
     instance = INSTANCES[command['DBInstanceIdentifier']]
@@ -98,6 +96,9 @@ class RDS(object):
     # XML snippet.
 
     workerpool = ThreadPoolExecutor(max_workers=4)
+    default_create_command = dict(
+        EngineVersion='11',
+    )
 
     @classmethod
     def CreateDBInstance(cls, command):
@@ -106,7 +107,7 @@ class RDS(object):
             status='creating',
         )
         INSTANCES[instance.identifier] = instance
-        command = command.copy()
+        command = dict(cls.default_create_command, **command)
         command['AllocatedStorage'] = int(command['AllocatedStorage'])
         cls.workerpool.submit(create_db_task, command)
         return instance.as_xml()
