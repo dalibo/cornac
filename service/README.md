@@ -77,15 +77,33 @@ $ ssh root@base-cornac.virt test -x /usr/pgsql-11/bin/initdb
 Once the template is ready, shut it down and continue using cornac and aws CLI.
 
 
-## Using awscli
+## Setup Cornac Webservice
 
-First, run the webservice in a terminal:
+Cornac requires a Postgres database to maintain it's inventory. Fortunately,
+cornac is able to self-bootstrap this Postgres instance using it's CLI.
+
+The Bootstrap command creates the instance and user according to the connection
+URI. Set [Postgres connection
+URI](https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-CONNSTRING)
+in `DATABASE` option in config file and run bootstrap like this:
+
+```
+$ cornac bootstrap
+```
+
+Great! You already have one managed Postgres instance! Now run the webservice in
+a terminal:
 
 ``` console
 $ CORNAC_SETTINGS=poc.cfg FLASK_APP=cornac.web flask run
 ```
 
-Then, setup AWSCLI profile:
+Cornac is now ready to accept any RDS request!
+
+
+## Using awscli
+
+Finally, setup AWSCLI profile:
 
 ``` console
 $ pip install awscli awscli-plugin-endpoint

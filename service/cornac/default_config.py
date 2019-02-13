@@ -2,6 +2,12 @@
 #       D E F A U L T   C O N F I G U R A T I O N
 #
 
+import os
+
+
+# DSN to Postgres database.
+DATABASE = os.environ.get('CORNAC_DATABASE')
+
 # Domain suffix to resolve guest IP from DNS.
 DNS_DOMAIN = ''
 
