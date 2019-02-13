@@ -32,8 +32,8 @@ def fallback(e):
     return make_response('Not Found', 404)
 
 
-@app.route("/", methods=["POST"])
-def main():
+@app.route("/rds", methods=["POST"])
+def rds():
     # Bridge RDS service and Flask routing. RDS actions are not RESTful.
     payload = dict(request.form)
     action_name = payload.pop('Action')
@@ -42,6 +42,7 @@ def main():
         action = getattr(RDS, action_name)
     except AttributeError:
         logger.warning("Unknown RDS action: %s.", action_name)
+        logger.debug("payload=%r", payload)
         abort(400)
 
     return make_response_xml(

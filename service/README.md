@@ -91,7 +91,7 @@ Then, setup AWSCLI profile:
 $ pip install awscli awscli-plugin-endpoint
 $ aws configure set plugins.endpoint awscli_plugin_endpoint
 $ aws configure --profile local  # Use dumb values.
-$ aws configure --profile local set rds.endpoint_url http://localhost:5000  # Point to flask address
+$ aws configure --profile local set rds.endpoint_url http://localhost:5000/rds  # Point to flask address
 ```
 
 Now use `aws` as usual:
