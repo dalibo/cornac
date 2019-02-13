@@ -42,6 +42,7 @@ def rds():
         action = getattr(RDS, action_name)
     except AttributeError:
         logger.warning("Unknown RDS action: %s.", action_name)
+        logger.debug("payload=%r", payload)
         abort(400)
 
     return make_response_xml(
