@@ -50,7 +50,12 @@ def wait_machine(address, port=22):
 
 class RemoteShell(object):
     def __init__(self, user, host):
-        self.ssh = ["ssh", "-l", user, host, "-q"]
+        self.ssh = [
+            "ssh", "-q", "-l", user, host,
+            # For now, just accept any key from remote hosts.
+            "-o", "UserKnownHostsFile=/dev/null",
+            "-o", "StrictHostKeyChecking=no",
+        ]
         self.scp_target_prefix = f"{user}@{host}:"
 
     def __call__(self, command):
