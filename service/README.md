@@ -1,27 +1,91 @@
 # REST Service
 
-The Cornac REST service is an open-source implémentation of AWS RDS API enabling
-the use of aws CLI tool to manage your Postgres instances.
+The Cornac webservice is an open-source implementation of AWS RDS API enabling
+the use of aws CLI to manage your Postgres instances.
+
+**⚠ This project is at its early stage of development. ⚠**
 
 
-Prerequisites:
+## Features
 
-- libvirt-daemon, virtinst and libguestfs-tools.
-- Resolution of VM with domain `.virt`.
-- SSH agent up and running.
-- libvirt unattended access.
-- a VM called `base-cornac` with Postgres 11.
+- Subset of RDS API compatible with awscli.
+- Configurable infastructure provider: libvirt, VMWare.
 
 
-Quick setup:
+## Prerequisites
+
+Cornac webservice has the following prerequisites:
+
+- SSH agent up and running with a private key.
+- VM must be accessible through SSH. The following documentation use `.virt` as
+  resolvable domain for virtual machines.
+- a template VM called `base-cornac` with Postgres 11.
+
+The `CORNAC_SETTINGS` environment variable point to a python file containing
+regular Flask configuration and cornac configuration. [Default cornac
+configuration](cornac/default_config.py) is commented. A [poc.cfg](poc.cfg)
+configuration file can be a good starting point.
+
+Further prerequisites depends on the infrastructure provider.
+
+
+### libvirt Prerequisites
+
+To use libvirt infrastructure, install cornac with `libvirt` extra:
 
 ``` console
-$ pip install -e .
-$ FLASK_APP=cornac.web flask run
+$ pip install -e .[libvirt]
+```
+
+libvirt infrastructure has the following prerequisites.
+
+- libvirt-daemon, virtinst and libguestfs-tools installed.
+- libvirt unattended access.
+
+
+### VMWare Prerequisites
+
+To use VMWare infrastructure, install cornac with `vmware` extra:
+
+``` console
+$ pip install -e .[vmware]
+```
+
+You must now configure `IAAS` parameter with the form like:
+
+``` python
+IAAS = "vcenter+https://user@sso.local:password@host/?no_verify=1"
 ```
 
 
-Setup AWSCLI profile:
+## Building the Template VM
+
+Cornac webservice clone a template to provision a new Postgres host. You must
+prepare this VM before calling cornac API.
+
+- Create a CentOS7 VM, usually named `base-cornac`.
+- Inject the SSH public key for root user.
+- Use `install.yml` playbook from `appliance/` directory to provision the VM. On
+  vSphere, add the `vmware` feature.
+
+``` console
+$ cd appliance/
+$ ansible-playbook install.yml -e host=base-cornac.virt -e features=vmware
+$ ssh root@base-cornac.virt test -x /usr/pgsql-11/bin/initdb
+```
+
+Once the template is ready, shut it down and continue using cornac and aws CLI.
+
+
+## Using awscli
+
+First, run the webservice in a terminal:
+
+``` console
+$ CORNAC_SETTINGS=poc.cfg FLASK_APP=cornac.web flask run
+```
+
+Then, setup AWSCLI profile:
 
 ``` console
 $ pip install awscli awscli-plugin-endpoint
@@ -29,7 +93,6 @@ $ aws configure set plugins.endpoint awscli_plugin_endpoint
 $ aws configure --profile local  # Use dumb values.
 $ aws configure --profile local set rds.endpoint_url http://localhost:5000  # Point to flask address
 ```
-
 
 Now use `aws` as usual:
 
