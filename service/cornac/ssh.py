@@ -33,7 +33,9 @@ def logged_cmd(cmd, *a, **kw):
 
 
 remote_retry = tenacity.retry(
-    wait=tenacity.wait_chain(tenacity.wait_fixed(8), tenacity.wait_fixed(1)),
+    wait=tenacity.wait_chain(*[
+        tenacity.wait_fixed(i) for i in range(8, 1, -1)
+    ]),
     stop=tenacity.stop_after_delay(120),
     reraise=True)
 
