@@ -6,6 +6,8 @@ from urllib.parse import urlparse
 
 import click
 
+from .database import connect
+from .database.migrator import Migrator
 from .iaas import IaaS
 from .operator import BasicOperator
 from .utils import KnownError
@@ -20,7 +22,8 @@ def root(argv=sys.argv[1:]):
 
 
 @root.command()
-def bootstrap():
+@click.pass_context
+def bootstrap(ctx):
     from .app import app
 
     connstring = app.config['DATABASE']
@@ -37,6 +40,36 @@ def bootstrap():
     with IaaS.connect(app.config['IAAS'], app.config) as iaas:
         operator = BasicOperator(iaas, app.config)
         operator.create_db_instance(command)
+
+    ctx.forward(migratedb)
+
+    # Now we could register user, instance, etc.
+
+
+@root.command()
+def migratedb():
+    from .app import app
+
+    migrator = Migrator()
+    migrator.inspect_available_versions()
+    with connect(app.config['DATABASE']) as conn:
+        migrator.inspect_current_version(conn)
+        if migrator.current_version:
+            logger.info("Database version is %s.", migrator.current_version)
+        else:
+            logger.info("Database is not initialized.")
+
+        versions = migrator.missing_versions
+        for version in versions:
+            logger.info("Applying %s.", version)
+            # Wraps in a transaction.
+            with conn:
+                migrator.apply(conn, version)
+
+    if versions:
+        logger.info("Database updated.")
+    else:
+        logger.info("Database already uptodate.")
 
 
 def entrypoint():

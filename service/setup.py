@@ -11,6 +11,11 @@ setup(
     ],
     extras_require={
         'libvirt': ["libvirt-python"],
+        # psycopg2 can be either wheel binary or source. But it's actually
+        # required. Using extras mimick *or* dependency. See
+        # https://trac.edgewall.org/ticket/12989 for an example in Trac.
+        'psycopg2': ["psycopg2"],
+        'psycopg2-binary': ["psycopg2"],
         'vmware': ["pyvmomi"],
     },
     entry_points={
