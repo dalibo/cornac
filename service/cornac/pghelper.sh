@@ -169,6 +169,9 @@ create-instance() {  #: <VERSION>
 	ExecReload=/bin/kill -HUP \$MAINPID
 	KillMode=mixed
 	KillSignal=SIGINT
+
+	[Install]
+	WantedBy=multi-user.target
 	EOF
 	systemctl daemon-reload
 	systemctl enable postgres-managed.service
