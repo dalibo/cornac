@@ -169,6 +169,9 @@ create-instance() {  #: <VERSION>
 	ExecReload=/bin/kill -HUP \$MAINPID
 	KillMode=mixed
 	KillSignal=SIGINT
+
+	[Install]
+	WantedBy=multi-user.target
 	EOF
 	systemctl daemon-reload
 	systemctl enable postgres-managed.service
@@ -237,6 +240,9 @@ prepare-disk() {  #: <DEVICE>
 
 	/dev/vdb1 : start=       63, size= ${part_sectors}, Id=8e
 	EOF
+
+	_log "Waiting for block device to appear."
+	sleep 1
 	part=${dev}1
 	if ! [ -b "$part" ] ; then
 		_log "Failed to get partition."
