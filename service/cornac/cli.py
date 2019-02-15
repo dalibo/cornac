@@ -22,17 +22,23 @@ def root(argv=sys.argv[1:]):
 
 
 @root.command()
+@click.option('--pgversion', default='11',
+              help="Postgres engine version to deploy.",
+              show_default=True, metavar='VERSION')
+@click.option('--size', default=5, type=click.IntRange(5, 300),
+              help="Allocated storage size in gigabytes.",
+              show_default=True, metavar='SIZE_GB',)
 @click.pass_context
-def bootstrap(ctx):
+def bootstrap(ctx, pgversion, size):
     from .app import app
 
     connstring = app.config['DATABASE']
     pgurl = urlparse(connstring)
     command = dict(
-        AllocatedStorage=5,
+        AllocatedStorage=size,
         DBInstanceIdentifier=pgurl.path.lstrip('/'),
         Engine='postgres',
-        EngineVersion='11',
+        EngineVersion=pgversion,
         MasterUserPassword=pgurl.password,
         MasterUsername=pgurl.username,
     )
