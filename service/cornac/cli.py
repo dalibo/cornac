@@ -1,7 +1,16 @@
+#
+# Main cornac CLI.
+#
+# Implements few commands for cornac initialization and maintainance. Running
+# the webservice is distinct since Flask already provide a good CLI for
+# development and production should use WSGI entrypoint.
+#
+
 import logging
 import os
 import pdb
 import sys
+from textwrap import dedent
 from urllib.parse import urlparse
 
 import click
@@ -16,12 +25,17 @@ from .utils import KnownError
 logger = logging.getLogger(__name__)
 
 
+# Root group of CLI.
 @click.group()
 def root(argv=sys.argv[1:]):
     pass
 
 
-@root.command()
+@root.command(help=dedent(
+    """
+    Provision guest and Postgres database for cornac itself. Initialize
+    database with schema and data.
+    """))
 @click.option('--pgversion', default='11',
               help="Postgres engine version to deploy.",
               show_default=True, metavar='VERSION')
@@ -53,7 +67,7 @@ def bootstrap(ctx, pgversion, size):
     # Now we could register user, instance, etc.
 
 
-@root.command()
+@root.command(help="Migrate schema and database of cornac database.")
 @click.option('--dry/--no-dry', default=True,
               help="Whether to effectively apply migration script.")
 def migratedb(dry):
