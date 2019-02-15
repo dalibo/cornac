@@ -41,13 +41,16 @@ def bootstrap(ctx):
         operator = BasicOperator(iaas, app.config)
         operator.create_db_instance(command)
 
-    ctx.forward(migratedb)
+    logger.info("Initializing schema.")
+    ctx.forward(migratedb, dry=False)
 
     # Now we could register user, instance, etc.
 
 
 @root.command()
-def migratedb():
+@click.option('--dry/--no-dry', default=True,
+              help="Whether to effectively apply migration script.")
+def migratedb(dry):
     from .app import app
 
     migrator = Migrator()
@@ -61,13 +64,15 @@ def migratedb():
 
         versions = migrator.missing_versions
         for version in versions:
-            logger.info("Applying %s.", version)
-            # Wraps in a transaction.
-            with conn:
-                migrator.apply(conn, version)
+            if dry:
+                logger.info("Would apply %s.", version)
+            else:
+                logger.info("Applying %s.", version)
+                with conn:  # Wraps in a transaction.
+                    migrator.apply(conn, version)
 
     if versions:
-        logger.info("Database updated.")
+        logger.info("Check terminated." if dry else "Database updated.")
     else:
         logger.info("Database already uptodate.")
 
