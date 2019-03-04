@@ -62,7 +62,7 @@ def bootstrap(ctx, pgversion, size):
         operator.create_db_instance(command)
 
     logger.info("Initializing schema.")
-    ctx.forward(migratedb, dry=False)
+    ctx.invoke(migratedb, dry=False)
 
     # Now we could register user, instance, etc.
 
