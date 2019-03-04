@@ -7,6 +7,7 @@ setup(
         # Flask already depends on click, but we use it directly too.
         "click",
         "flask",
+        "flask-sqlalchemy",
         "tenacity",
     ],
     extras_require={

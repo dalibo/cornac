@@ -17,6 +17,7 @@ import click
 
 from .database import connect
 from .database.migrator import Migrator
+from .database.model import DBInstance
 from .iaas import IaaS
 from .operator import BasicOperator
 from .utils import KnownError
@@ -44,9 +45,9 @@ def root(argv=sys.argv[1:]):
               show_default=True, metavar='SIZE_GB',)
 @click.pass_context
 def bootstrap(ctx, pgversion, size):
-    from .app import app
+    from .app import app, db
 
-    connstring = app.config['DATABASE']
+    connstring = app.config['SQLALCHEMY_DATABASE_URI']
     pgurl = urlparse(connstring)
     command = dict(
         AllocatedStorage=size,
@@ -64,7 +65,16 @@ def bootstrap(ctx, pgversion, size):
     logger.info("Initializing schema.")
     ctx.invoke(migratedb, dry=False)
 
-    # Now we could register user, instance, etc.
+    logger.info("Registering instance to inventory.")
+    with app.app_context():
+        instance = DBInstance()
+        instance.identifier = command['DBInstanceIdentifier']
+        instance.status = 'running'
+        # Drop master password before saving command in database.
+        instance.create_params = dict(command, MasterUserPassword=None)
+        db.session.add(instance)
+        db.session.commit()
+    logger.debug("Done")
 
 
 @root.command(help="Migrate schema and database of cornac database.")
@@ -75,7 +85,7 @@ def migratedb(dry):
 
     migrator = Migrator()
     migrator.inspect_available_versions()
-    with connect(app.config['DATABASE']) as conn:
+    with connect(app.config['SQLALCHEMY_DATABASE_URI']) as conn:
         migrator.inspect_current_version(conn)
         if migrator.current_version:
             logger.info("Database version is %s.", migrator.current_version)
