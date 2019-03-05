@@ -17,7 +17,7 @@ def create_app():
         path = os.path.realpath(os.environ['CORNAC_SETTINGS'])
         app.config.from_pyfile(path)
 
-    from .database.model import db
+    from .core.model import db
     db.init_app(app)
 
     return app

@@ -1,3 +1,6 @@
+from contextlib import contextmanager
+
+import psycopg2
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.dialects.postgresql import (
     ENUM,
@@ -6,6 +9,17 @@ from sqlalchemy.dialects.postgresql import (
 
 
 db = SQLAlchemy()
+
+
+@contextmanager
+def connect(connstring):
+    # Manager for connecting to psycopg2 without flask nor SQLAlchemy.
+    conn = psycopg2.connect(connstring)
+    try:
+        yield conn
+    finally:
+        conn.close()
+
 
 DBInstanceStatus = ENUM(
     'creating',

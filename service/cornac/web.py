@@ -9,9 +9,9 @@ from uuid import uuid4
 from flask import Blueprint, abort, current_app, make_response, request
 from jinja2 import Template
 
+from .core.model import DBInstance, db
 from .iaas import IaaS
 from .operator import BasicOperator
-from .database.model import DBInstance, db
 
 
 logger = logging.getLogger(__name__)

@@ -18,9 +18,8 @@ from flask import current_app
 from flask.cli import FlaskGroup
 
 
-from .database import connect
-from .database.migrator import Migrator
-from .database.model import DBInstance, db
+from .core.migrator import Migrator
+from .core.model import DBInstance, db, connect
 from .iaas import IaaS
 from .operator import BasicOperator
 
