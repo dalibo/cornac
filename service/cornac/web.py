@@ -16,7 +16,8 @@ from .operator import BasicOperator
 
 # Setup logging before instanciating Flask app.
 logging.basicConfig(format="%(levelname)5.5s %(message)s", level=logging.DEBUG)
-from .app import app  # noqa
+from .app import app, db  # noqa
+from .database.model import DBInstance  # noqa
 logger = logging.getLogger(__name__)
 
 # Fake in-memory database.
@@ -60,7 +61,8 @@ def task(func):
     def task_wrapper(*a, **kw):
         logger.info("Running task %s.", func.__name__)
         try:
-            ret = func(*a, **kw)
+            with app.app_context():
+                ret = func(*a, **kw)
             logger.info("Task %s done.", func.__name__)
             return ret
         except pdb.bdb.BdbQuit:
@@ -75,19 +77,18 @@ def task(func):
 
 
 @task
-def create_db_task(command):
+def create_db_task(instance_id):
     # Background task to trigger operator and update global in-memory database.
 
-    if command['DBInstanceIdentifier'] not in INSTANCES:
-        raise Exception("Unknown instance")
+    instance = DBInstance.query.filter(DBInstance.id == instance_id).one()
 
     with IaaS.connect(app.config['IAAS'], app.config) as iaas:
         operator = BasicOperator(iaas, app.config)
-        response = operator.create_db_instance(command)
+        response = operator.create_db_instance(instance.create_command)
 
-    instance = INSTANCES[command['DBInstanceIdentifier']]
     instance.status = 'running'
-    instance.endpoint_address = response['Endpoint']['Address']
+    instance.attributes = response
+    db.session.commit()
 
 
 class RDS(object):
@@ -103,15 +104,19 @@ class RDS(object):
 
     @classmethod
     def CreateDBInstance(cls, command):
-        instance = DBInstance(
-            identifier=command['DBInstanceIdentifier'],
-            status='creating',
-        )
-        INSTANCES[instance.identifier] = instance
         command = dict(cls.default_create_command, **command)
         command['AllocatedStorage'] = int(command['AllocatedStorage'])
-        cls.workerpool.submit(create_db_task, command)
-        return instance.as_xml()
+
+        instance = DBInstance()
+        instance.identifier = command['DBInstanceIdentifier']
+        instance.status = 'creating'
+        instance.create_command = command
+        db.session.add(instance)
+        db.session.commit()
+
+        cls.workerpool.submit(create_db_task, instance.id)
+
+        return InstanceEncoder(instance).as_xml()
 
     INSTANCE_LIST_TMPL = Template(dedent("""\
     <DBInstances>
@@ -123,7 +128,9 @@ class RDS(object):
 
     @classmethod
     def DescribeDBInstances(cls, command):
-        return cls.INSTANCE_LIST_TMPL.render(instances=INSTANCES.values())
+        instances = DBInstance.query.all()
+        return cls.INSTANCE_LIST_TMPL.render(
+            instances=[InstanceEncoder(i) for i in instances])
 
 
 RESPONSE_TMPL = Template("""\
@@ -147,9 +154,8 @@ def make_response_xml(action, requestid, result):
     return response
 
 
-class DBInstance(object):
-    # This object helps tracking instance status in memory and rendering
-    # instance object to XML response.
+class InstanceEncoder:
+    # Adapt DBInstance object to RDS XML response.
 
     XML_SNIPPET_TMPL = Template(dedent("""\
     <DBInstance>
@@ -166,10 +172,8 @@ class DBInstance(object):
     </DBInstance>
     """), trim_blocks=True)
 
-    def __init__(self, identifier, status):
-        self.identifier = identifier
-        self.status = status
-        self.endpoint_address = None
+    def __init__(self, instance):
+        self.instance = instance
 
     def as_xml(self):
-        return self.XML_SNIPPET_TMPL.render(**self.__dict__)
+        return self.XML_SNIPPET_TMPL.render(**self.instance.__dict__)

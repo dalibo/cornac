@@ -85,7 +85,7 @@ cornac is able to self-bootstrap this Postgres instance using it's CLI.
 The Bootstrap command creates the instance and user according to the connection
 URI. Set [Postgres connection
 URI](https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-CONNSTRING)
-in `DATABASE` option in config file and run bootstrap like this:
+in `SQLALCHEMY_DATABASE_URI` option in config file and run bootstrap like this:
 
 ```
 $ cornac bootstrap

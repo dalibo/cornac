@@ -5,9 +5,6 @@
 import os
 
 
-# DSN to Postgres database.
-DATABASE = os.environ.get('CORNAC_DATABASE')
-
 # Domain suffix to resolve guest IP from DNS.
 DNS_DOMAIN = ''
 
@@ -28,6 +25,9 @@ NETWORK = None
 # datacenter1/vm/templates/base-cornac.
 ORIGINAL_MACHINE = 'base-cornac'
 
+# DSN to Postgres database.
+SQLALCHEMY_DATABASE_URI = os.environ.get('CORNAC_DATABASE')
+
 # Provider-specific name of the storage pool (or datastore in vSphere).
 STORAGE_POOL = 'default'
 
@@ -37,3 +37,12 @@ ROOT_PUBLIC_KEY = None
 # vCenter specific resource pool where to place guests. Could be a host or a
 # cluster resource pool. e.g. 'datacenter1/host/esxi1/Resources
 VCENTER_RESOURCE_POOL = None
+
+
+#
+#       I N T E R N A L S
+#
+# Here cornac configures Flask and extensions. You should not overload this
+# settings.
+
+SQLALCHEMY_TRACK_MODIFICATIONS = False
