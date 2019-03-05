@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 
 class Migrator(object):
-    versionsdir = os.path.dirname(__file__) + "/versions"
+    versionsdir = os.path.dirname(__file__)
 
     def __init__(self):
         self.current_version = None
