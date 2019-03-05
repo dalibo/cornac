@@ -2,7 +2,6 @@ import functools
 import logging
 import pdb
 import sys
-from collections import OrderedDict
 from concurrent.futures import ThreadPoolExecutor
 from textwrap import dedent
 from uuid import uuid4
@@ -19,9 +18,6 @@ logging.basicConfig(format="%(levelname)5.5s %(message)s", level=logging.DEBUG)
 from .app import app, db  # noqa
 from .database.model import DBInstance  # noqa
 logger = logging.getLogger(__name__)
-
-# Fake in-memory database.
-INSTANCES = OrderedDict()
 
 
 @app.errorhandler(404)
