@@ -22,10 +22,15 @@ from .database.migrator import Migrator
 from .database.model import DBInstance
 from .iaas import IaaS
 from .operator import BasicOperator
-from .utils import KnownError
 
 
 logger = logging.getLogger(__name__)
+
+
+class KnownError(Exception):
+    def __init__(self, message, exit_code=os.EX_SOFTWARE):
+        super(KnownError, self).__init__(message)
+        self.exit_code = exit_code
 
 
 def create_app():
