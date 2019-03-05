@@ -1,7 +1,6 @@
 import os.path
 
 from flask import Flask
-from flask_sqlalchemy import SQLAlchemy
 
 
 app = Flask(__name__)
@@ -10,4 +9,9 @@ config.from_object(__name__ + '.default_config')
 if 'CORNAC_SETTINGS' in os.environ:
     path = os.path.realpath(os.environ['CORNAC_SETTINGS'])
     config.from_pyfile(path)
-db = SQLAlchemy(app)
+
+
+def create_app():
+    from ..database.model import db
+    db.init_app(app)
+    return app

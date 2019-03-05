@@ -19,7 +19,7 @@ from flask.cli import FlaskGroup
 
 from .database import connect
 from .database.migrator import Migrator
-from .database.model import DBInstance
+from .database.model import DBInstance, db
 from .iaas import IaaS
 from .operator import BasicOperator
 
@@ -35,8 +35,8 @@ class KnownError(Exception):
 
 def create_app():
     # Fake factory for Flask app.
-    from .flask import app
-    return app
+    from .flask import create_app as real_create_app
+    return real_create_app()
 
 
 # Root group of CLI.
@@ -58,7 +58,7 @@ def root(argv=sys.argv[1:]):
               show_default=True, metavar='SIZE_GB',)
 @click.pass_context
 def bootstrap(ctx, pgversion, size):
-    from .flask import app, db
+    from .flask import app
 
     connstring = app.config['SQLALCHEMY_DATABASE_URI']
     pgurl = urlparse(connstring)

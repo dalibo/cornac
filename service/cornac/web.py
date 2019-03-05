@@ -11,8 +11,8 @@ from jinja2 import Template
 
 from .iaas import IaaS
 from .operator import BasicOperator
-from .flask import app, db
-from .database.model import DBInstance
+from .flask import app
+from .database.model import DBInstance, db
 
 
 logger = logging.getLogger(__name__)

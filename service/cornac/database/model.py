@@ -1,10 +1,11 @@
+from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.dialects.postgresql import (
     ENUM,
     JSONB,
 )
 
-from ..flask import db
 
+db = SQLAlchemy()
 
 DBInstanceStatus = ENUM(
     'creating',
