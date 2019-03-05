@@ -45,7 +45,7 @@ def root(argv=sys.argv[1:]):
               show_default=True, metavar='SIZE_GB',)
 @click.pass_context
 def bootstrap(ctx, pgversion, size):
-    from .app import app, db
+    from .flask import app, db
 
     connstring = app.config['SQLALCHEMY_DATABASE_URI']
     pgurl = urlparse(connstring)
@@ -81,7 +81,7 @@ def bootstrap(ctx, pgversion, size):
 @click.option('--dry/--no-dry', default=True,
               help="Whether to effectively apply migration script.")
 def migratedb(dry):
-    from .app import app
+    from .flask import app
 
     migrator = Migrator()
     migrator.inspect_available_versions()

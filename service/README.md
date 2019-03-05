@@ -23,8 +23,8 @@ Cornac webservice has the following prerequisites:
 
 The `CORNAC_SETTINGS` environment variable point to a python file containing
 regular Flask configuration and cornac configuration. [Default cornac
-configuration](cornac/default_config.py) is commented. A [poc.cfg](poc.cfg)
-configuration file can be a good starting point.
+configuration](cornac/flask/default_config.py) is commented. A
+[poc.cfg](poc.cfg) configuration file can be a good starting point.
 
 Further prerequisites depends on the infrastructure provider.
 

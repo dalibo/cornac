@@ -11,12 +11,10 @@ from jinja2 import Template
 
 from .iaas import IaaS
 from .operator import BasicOperator
+from .flask import app, db
+from .database.model import DBInstance
 
 
-# Setup logging before instanciating Flask app.
-logging.basicConfig(format="%(levelname)5.5s %(message)s", level=logging.DEBUG)
-from .app import app, db  # noqa
-from .database.model import DBInstance  # noqa
 logger = logging.getLogger(__name__)
 
 

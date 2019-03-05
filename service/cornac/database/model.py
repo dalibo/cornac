@@ -3,7 +3,7 @@ from sqlalchemy.dialects.postgresql import (
     JSONB,
 )
 
-from ..app import db
+from ..flask import db
 
 
 DBInstanceStatus = ENUM(

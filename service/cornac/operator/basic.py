@@ -82,7 +82,7 @@ class BasicOperator(object):
 def test_main():
     # Hard coded real test case, for PoC development.
 
-    from ..app import config
+    from .. import config
 
     # What aws would send to REST API.
     command = {
