@@ -61,7 +61,8 @@ def task(func):
     def task_wrapper(*a, **kw):
         logger.info("Running task %s.", func.__name__)
         try:
-            ret = func(*a, **kw)
+            with app.app_context():
+                ret = func(*a, **kw)
             logger.info("Task %s done.", func.__name__)
             return ret
         except pdb.bdb.BdbQuit:
@@ -76,19 +77,18 @@ def task(func):
 
 
 @task
-def create_db_task(command):
+def create_db_task(instance_id):
     # Background task to trigger operator and update global in-memory database.
 
-    if command['DBInstanceIdentifier'] not in INSTANCES:
-        raise Exception("Unknown instance")
+    instance = DBInstance.query.filter(DBInstance.id == instance_id).one()
 
     with IaaS.connect(app.config['IAAS'], app.config) as iaas:
         operator = BasicOperator(iaas, app.config)
-        response = operator.create_db_instance(command)
+        response = operator.create_db_instance(instance.create_command)
 
-    instance = INSTANCES[command['DBInstanceIdentifier']]
     instance.status = 'running'
-    instance.endpoint_address = response['Endpoint']['Address']
+    instance.attributes = response
+    db.session.commit()
 
 
 class RDS(object):
@@ -104,14 +104,17 @@ class RDS(object):
 
     @classmethod
     def CreateDBInstance(cls, command):
-        instance = DBInstance(
-            identifier=command['DBInstanceIdentifier'],
-            status='creating',
-        )
-        INSTANCES[instance.identifier] = instance
         command = dict(cls.default_create_command, **command)
         command['AllocatedStorage'] = int(command['AllocatedStorage'])
-        cls.workerpool.submit(create_db_task, command)
+
+        instance = DBInstance()
+        instance.identifier = command['DBInstanceIdentifier']
+        instance.status = 'creating'
+        instance.create_command = command
+        db.session.add(instance)
+        db.session.commit()
+
+        cls.workerpool.submit(create_db_task, instance.id)
 
         return InstanceEncoder(instance).as_xml()
 
