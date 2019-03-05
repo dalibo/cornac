@@ -38,10 +38,9 @@ def create_app():
     # Fake factory for Flask app.
     from .flask import create_app as real_create_app
     app = real_create_app()
-
-    # Import web routes.
-    __import__('cornac.web')
-
+    from .web import rds, fallback
+    app.register_blueprint(rds)
+    app.errorhandler(404)(fallback)
     return app
 
 

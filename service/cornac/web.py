@@ -6,29 +6,28 @@ from concurrent.futures import ThreadPoolExecutor
 from textwrap import dedent
 from uuid import uuid4
 
-from flask import abort, make_response, request
+from flask import Blueprint, abort, current_app, make_response, request
 from jinja2 import Template
 
 from .iaas import IaaS
 from .operator import BasicOperator
-from .flask import app
 from .database.model import DBInstance, db
 
 
 logger = logging.getLogger(__name__)
+rds = Blueprint('rds', __name__)
 
 
-@app.errorhandler(404)
 def fallback(e):
     # By default, log awscli requests.
-    app.logger.info(
+    current_app.logger.info(
         "%s %s %s",
         request.method, request.path, dict(request.form))
     return make_response('Not Found', 404)
 
 
-@app.route("/rds", methods=["POST"])
-def rds():
+@rds.route("/rds", methods=["POST"])
+def main():
     # Bridge RDS service and Flask routing. RDS actions are not RESTful.
     payload = dict(request.form)
     action_name = payload.pop('Action')
@@ -47,12 +46,15 @@ def rds():
     )
 
 
+WORKERPOOL = ThreadPoolExecutor(max_workers=4)
+
+
 def task(func):
     # Wraps a function to be executed in a concurrent executor for logging and
     # error handling.
 
     @functools.wraps(func)
-    def task_wrapper(*a, **kw):
+    def task_wrapper(app, *a, **kw):
         logger.info("Running task %s.", func.__name__)
         try:
             with app.app_context():
@@ -67,6 +69,14 @@ def task(func):
                 pdb.post_mortem(sys.exc_info()[2])
             raise
 
+    def send_task(*a, **kw):
+        # Get effective current app, and pass it to wrapper. The wrapper will
+        # set app as current app for the worker thread.
+        app = current_app._get_current_object()
+        WORKERPOOL.submit(task_wrapper, app, *a, **kw)
+
+    task_wrapper.send = send_task
+
     return task_wrapper
 
 
@@ -76,8 +86,8 @@ def create_db_task(instance_id):
 
     instance = DBInstance.query.filter(DBInstance.id == instance_id).one()
 
-    with IaaS.connect(app.config['IAAS'], app.config) as iaas:
-        operator = BasicOperator(iaas, app.config)
+    with IaaS.connect(current_app.config['IAAS'], current_app.config) as iaas:
+        operator = BasicOperator(iaas, current_app.config)
         response = operator.create_db_instance(instance.create_command)
 
     instance.status = 'running'
@@ -91,7 +101,6 @@ class RDS(object):
     # Each method corresponds to a well-known RDS action, returning result as
     # XML snippet.
 
-    workerpool = ThreadPoolExecutor(max_workers=4)
     default_create_command = dict(
         EngineVersion='11',
     )
@@ -108,7 +117,7 @@ class RDS(object):
         db.session.add(instance)
         db.session.commit()
 
-        cls.workerpool.submit(create_db_task, instance.id)
+        create_db_task.send(instance.id)
 
         return InstanceEncoder(instance).as_xml()
 
