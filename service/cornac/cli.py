@@ -14,6 +14,8 @@ from textwrap import dedent
 from urllib.parse import urlparse
 
 import click
+from flask.cli import FlaskGroup
+
 
 from .database import connect
 from .database.migrator import Migrator
@@ -26,8 +28,14 @@ from .utils import KnownError
 logger = logging.getLogger(__name__)
 
 
+def create_app():
+    # Fake factory for Flask app.
+    from .flask import app
+    return app
+
+
 # Root group of CLI.
-@click.group()
+@click.group(cls=FlaskGroup, create_app=create_app)
 def root(argv=sys.argv[1:]):
     pass
 
