@@ -8,8 +8,8 @@ import pdb
 import sys
 from pathlib import Path
 
-from .iaas import IaaS
-from .ssh import RemoteShell
+from ..iaas import IaaS
+from ..ssh import RemoteShell
 
 
 logger = logging.getLogger(__name__)
@@ -82,7 +82,7 @@ class BasicOperator(object):
 def test_main():
     # Hard coded real test case, for PoC development.
 
-    from .app import config
+    from ..app import config
 
     # What aws would send to REST API.
     command = {
