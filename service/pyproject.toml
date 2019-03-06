@@ -1,0 +1,34 @@
+[tool.poetry]
+name = "pgCornac"
+version = "0.0.1"
+description = "RDS-compatible Managed-Postgres Webservice"
+authors = ["Étienne BERSAC <etienne.bersac@dalibo.com>"]
+license = "PostgreSQL"
+packages = [{ include = "cornac" }]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.6"
+flask = "^1.0"
+click = "^7.0"
+flask-sqlalchemy = "^2.3"
+tenacity = "^5.0"
+
+[tool.poetry.dev-dependencies]
+flake8 = "^3.7"
+
+[tool.poetry.extras]
+libvirt = ["libvirt-python"]
+# psycopg2 can be either wheel binary or source. But it's actually required.
+# Using extras mimick *or* dependency. See
+# https://trac.edgewall.org/ticket/12989 for an example in Trac.
+psycopg2 = ["psycopg2"]
+psycopg2-binary = ["psycopg2-binary"]
+vmware = ["pyvmomi"]
+
+[tool.poetry.scripts]
+cornac = 'cornac.cli:entrypoint'
+
+[build-system]
+requires = ["poetry>=0.12"]
+build-backend = "poetry.masonry.api"

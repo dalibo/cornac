@@ -36,7 +36,7 @@ Further prerequisites depends on the infrastructure provider.
 To use libvirt infrastructure, install cornac with `libvirt` extra:
 
 ``` console
-$ pip install -e .[psycopg2-binary,libvirt]
+$ pip install .[psycopg2-binary,libvirt]
 ```
 
 libvirt infrastructure has the following prerequisites.
@@ -50,7 +50,7 @@ libvirt infrastructure has the following prerequisites.
 To use VMWare infrastructure, install cornac with `vmware` extra:
 
 ``` console
-$ pip install -e .[psycopg2-binary,vmware]
+$ pip install .[psycopg2-binary,vmware]
 ```
 
 You must now configure `IAAS` parameter with the form like:
