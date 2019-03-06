@@ -14,20 +14,37 @@ from textwrap import dedent
 from urllib.parse import urlparse
 
 import click
+from flask import current_app
+from flask.cli import FlaskGroup
 
-from .database import connect
-from .database.migrator import Migrator
-from .database.model import DBInstance
+
+from .core.model import DBInstance, db, connect
+from .core.schema import Migrator
 from .iaas import IaaS
 from .operator import BasicOperator
-from .utils import KnownError
 
 
 logger = logging.getLogger(__name__)
 
 
+class KnownError(Exception):
+    def __init__(self, message, exit_code=os.EX_SOFTWARE):
+        super(KnownError, self).__init__(message)
+        self.exit_code = exit_code
+
+
+def create_app():
+    # Fake factory for Flask app.
+    from . import create_app as real_create_app
+    app = real_create_app()
+    from .web import rds, fallback
+    app.register_blueprint(rds)
+    app.errorhandler(404)(fallback)
+    return app
+
+
 # Root group of CLI.
-@click.group()
+@click.group(cls=FlaskGroup, create_app=create_app)
 def root(argv=sys.argv[1:]):
     pass
 
@@ -45,9 +62,7 @@ def root(argv=sys.argv[1:]):
               show_default=True, metavar='SIZE_GB',)
 @click.pass_context
 def bootstrap(ctx, pgversion, size):
-    from .app import app, db
-
-    connstring = app.config['SQLALCHEMY_DATABASE_URI']
+    connstring = current_app.config['SQLALCHEMY_DATABASE_URI']
     pgurl = urlparse(connstring)
     command = dict(
         AllocatedStorage=size,
@@ -58,22 +73,21 @@ def bootstrap(ctx, pgversion, size):
         MasterUsername=pgurl.username,
     )
     logger.info("Creating instance %s.", command['DBInstanceIdentifier'])
-    with IaaS.connect(app.config['IAAS'], app.config) as iaas:
-        operator = BasicOperator(iaas, app.config)
+    with IaaS.connect(current_app.config['IAAS'], current_app.config) as iaas:
+        operator = BasicOperator(iaas, current_app.config)
         operator.create_db_instance(command)
 
     logger.info("Initializing schema.")
     ctx.invoke(migratedb, dry=False)
 
     logger.info("Registering instance to inventory.")
-    with app.app_context():
-        instance = DBInstance()
-        instance.identifier = command['DBInstanceIdentifier']
-        instance.status = 'running'
-        # Drop master password before saving command in database.
-        instance.create_params = dict(command, MasterUserPassword=None)
-        db.session.add(instance)
-        db.session.commit()
+    instance = DBInstance()
+    instance.identifier = command['DBInstanceIdentifier']
+    instance.status = 'running'
+    # Drop master password before saving command in database.
+    instance.create_params = dict(command, MasterUserPassword=None)
+    db.session.add(instance)
+    db.session.commit()
     logger.debug("Done")
 
 
@@ -81,11 +95,9 @@ def bootstrap(ctx, pgversion, size):
 @click.option('--dry/--no-dry', default=True,
               help="Whether to effectively apply migration script.")
 def migratedb(dry):
-    from .app import app
-
     migrator = Migrator()
     migrator.inspect_available_versions()
-    with connect(app.config['SQLALCHEMY_DATABASE_URI']) as conn:
+    with connect(current_app.config['SQLALCHEMY_DATABASE_URI']) as conn:
         migrator.inspect_current_version(conn)
         if migrator.current_version:
             logger.info("Database version is %s.", migrator.current_version)

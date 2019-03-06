@@ -22,7 +22,9 @@ Cornac webservice has the following prerequisites:
 - a template VM called `base-cornac` with Postgres 11.
 
 The `CORNAC_SETTINGS` environment variable point to a python file containing
-regular Flask configuration and cornac configuration. [Default cornac
+regular
+[Flask configuration](http://flask.pocoo.org/docs/1.0/config/#configuring-from-files)
+and cornac configuration. [Default cornac
 configuration](cornac/default_config.py) is commented. A [poc.cfg](poc.cfg)
 configuration file can be a good starting point.
 
@@ -95,7 +97,7 @@ Great! You already have one managed Postgres instance! Now run the webservice in
 a terminal:
 
 ``` console
-$ CORNAC_SETTINGS=poc.cfg FLASK_APP=cornac.web flask run
+$ CORNAC_SETTINGS=poc.cfg cornac run
 ```
 
 Cornac is now ready to accept any RDS request!
@@ -109,7 +111,7 @@ Finally, setup AWSCLI profile:
 $ pip install awscli awscli-plugin-endpoint
 $ aws configure set plugins.endpoint awscli_plugin_endpoint
 $ aws configure --profile local  # Use dumb values.
-$ aws configure --profile local set rds.endpoint_url http://localhost:5000/rds  # Point to flask address
+$ aws configure --profile local set rds.endpoint_url http://localhost:5000/rds  # Point to cornac listen URL
 ```
 
 Now use `aws` as usual:
