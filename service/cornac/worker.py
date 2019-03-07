@@ -28,6 +28,6 @@ def create_db(instance_id):
         operator = BasicOperator(iaas, current_app.config)
         response = operator.create_db_instance(instance.create_command)
 
-    instance.status = 'running'
+    instance.status = 'available'
     instance.attributes = response
     db.session.commit()

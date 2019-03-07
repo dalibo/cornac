@@ -74,7 +74,7 @@ def bootstrap(ctx, pgversion, size):
     logger.info("Registering instance to inventory.")
     instance = DBInstance()
     instance.identifier = command['DBInstanceIdentifier']
-    instance.status = 'running'
+    instance.status = 'available'
     # Drop master password before saving command in database.
     instance.create_params = dict(command, MasterUserPassword=None)
     db.session.add(instance)

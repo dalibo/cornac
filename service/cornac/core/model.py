@@ -22,9 +22,28 @@ def connect(connstring):
 
 
 DBInstanceStatus = ENUM(
+    # Keep it sync with cornac/core/schema/001-instances.sql.
+    'available',
+    'backing-up',
     'creating',
-    'running',
+    'deleting',
+    'failed',
+    'incompatible-network',
+    'incompatible-option-group',
+    'incompatible-parameters',
+    'incompatible-restore',
+    'maintenance',
+    'modifying',
+    'rebooting',
+    'renaming',
+    'resetting-master-credentials',
+    'restore-error',
+    'starting',
     'stopped',
+    'stopping',
+    'storage-full',
+    'storage-optimization',
+    'upgrading',
     name='db_instance_status',
 )
 
