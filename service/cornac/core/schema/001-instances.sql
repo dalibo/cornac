@@ -1,3 +1,4 @@
+-- cf. https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Overview.DBInstance.Status.html
 CREATE TYPE "db_instance_status" AS ENUM (
   'creating',
   'running',
