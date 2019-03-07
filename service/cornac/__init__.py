@@ -24,4 +24,7 @@ def create_app():
     app.register_blueprint(rds)
     app.errorhandler(404)(fallback)
 
+    from .worker import dramatiq
+    dramatiq.init_app(app)
+
     return app
