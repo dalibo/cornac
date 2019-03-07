@@ -18,6 +18,7 @@ from flask import current_app
 from flask.cli import FlaskGroup
 
 
+from . import create_app
 from .core.model import DBInstance, db, connect
 from .core.schema import Migrator
 from .iaas import IaaS
@@ -31,16 +32,6 @@ class KnownError(Exception):
     def __init__(self, message, exit_code=os.EX_SOFTWARE):
         super(KnownError, self).__init__(message)
         self.exit_code = exit_code
-
-
-def create_app():
-    # Fake factory for Flask app.
-    from . import create_app as real_create_app
-    app = real_create_app()
-    from .web import rds, fallback
-    app.register_blueprint(rds)
-    app.errorhandler(404)(fallback)
-    return app
 
 
 # Root group of CLI.
