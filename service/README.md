@@ -93,12 +93,18 @@ in `SQLALCHEMY_DATABASE_URI` option in config file and run bootstrap like this:
 $ cornac bootstrap
 ```
 
-Great! You already have one managed Postgres instance! Now run the webservice in
-a terminal:
+Great! You already have one managed Postgres instance! Two distinct services
+runs cornac: the webserver and the background worker. Run each of them in a
+separate terminal.
 
-``` console
-$ CORNAC_SETTINGS=poc.cfg cornac run
-```
+- For the background worker:
+  ``` console
+  $ CORNAC_SETTINGS=poc.cfg cornac worker --processes 1
+  ```
+- For the web server:
+  ``` console
+  $ CORNAC_SETTINGS=poc.cfg cornac run
+  ```
 
 Cornac is now ready to accept any RDS request!
 

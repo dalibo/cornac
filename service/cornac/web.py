@@ -1,17 +1,12 @@
-import functools
 import logging
-import pdb
-import sys
-from concurrent.futures import ThreadPoolExecutor
 from textwrap import dedent
 from uuid import uuid4
 
 from flask import Blueprint, abort, current_app, make_response, request
 from jinja2 import Template
 
+from . import worker
 from .core.model import DBInstance, db
-from .iaas import IaaS
-from .operator import BasicOperator
 
 
 logger = logging.getLogger(__name__)
@@ -46,55 +41,6 @@ def main():
     )
 
 
-WORKERPOOL = ThreadPoolExecutor(max_workers=4)
-
-
-def task(func):
-    # Wraps a function to be executed in a concurrent executor for logging and
-    # error handling.
-
-    @functools.wraps(func)
-    def task_wrapper(app, *a, **kw):
-        logger.info("Running task %s.", func.__name__)
-        try:
-            with app.app_context():
-                ret = func(*a, **kw)
-            logger.info("Task %s done.", func.__name__)
-            return ret
-        except pdb.bdb.BdbQuit:
-            pass
-        except Exception:
-            logger.exception("Unhandled exception in background task:")
-            if False:
-                pdb.post_mortem(sys.exc_info()[2])
-            raise
-
-    def send_task(*a, **kw):
-        # Get effective current app, and pass it to wrapper. The wrapper will
-        # set app as current app for the worker thread.
-        app = current_app._get_current_object()
-        WORKERPOOL.submit(task_wrapper, app, *a, **kw)
-
-    task_wrapper.send = send_task
-
-    return task_wrapper
-
-
-@task
-def create_db_task(instance_id):
-    # Background task to trigger operator and update global in-memory database.
-
-    instance = DBInstance.query.filter(DBInstance.id == instance_id).one()
-
-    with IaaS.connect(current_app.config['IAAS'], current_app.config) as iaas:
-        operator = BasicOperator(iaas, current_app.config)
-        response = operator.create_db_instance(instance.create_command)
-
-    instance.status = 'running'
-    instance.attributes = response
-    db.session.commit()
-
-
 class RDS(object):
     # RDS-like service.
     #
@@ -117,7 +63,7 @@ class RDS(object):
         db.session.add(instance)
         db.session.commit()
 
-        create_db_task.send(instance.id)
+        worker.create_db.send(instance.id)
 
         return InstanceEncoder(instance).as_xml()
 
