@@ -139,11 +139,12 @@ class LibVirtIaaS(IaaS):
 
     def start_machine(self, domain, wait=True):
         domain = self._ensure_domain(domain)
+        name = domain.name()
         state, _ = domain.state()
         if libvirt.VIR_DOMAIN_RUNNING == state:
-            logger.debug("VM %s running.", domain)
+            logger.debug("VM %s running.", name)
         else:
-            logger.info("Starting VM %s.", domain)
+            logger.info("Starting VM %s.", name)
             domain.create()
 
         while wait:
@@ -155,11 +156,12 @@ class LibVirtIaaS(IaaS):
 
     def stop_machine(self, domain, wait=True):
         domain = self._ensure_domain(domain)
+        name = domain.name()
         state, _ = domain.state()
         if libvirt.VIR_DOMAIN_SHUTOFF == state:
-            logger.debug("VM %s stopped.", domain)
+            logger.debug("VM %s stopped.", name)
         else:
-            logger.info("Stopping VM %s.", domain)
+            logger.info("Stopping VM %s.", name)
             domain.shutdown()
 
         while wait:
