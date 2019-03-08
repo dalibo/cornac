@@ -59,7 +59,7 @@ class RDS(object):
         instance = DBInstance()
         instance.identifier = command['DBInstanceIdentifier']
         instance.status = 'creating'
-        instance.create_command = command
+        instance.data = command
         db.session.add(instance)
         db.session.commit()
 
@@ -80,6 +80,28 @@ class RDS(object):
         instances = DBInstance.query.all()
         return cls.INSTANCE_LIST_TMPL.render(
             instances=[InstanceEncoder(i) for i in instances])
+
+    @classmethod
+    def StartDBInstance(cls, command):
+        instance = (
+            DBInstance.query
+            .filter(DBInstance.identifier == command['DBInstanceIdentifier'])
+            .one())
+        instance.status = 'starting'
+        db.session.commit()
+        worker.start_db_instance.send(instance.id)
+        return InstanceEncoder(instance).as_xml()
+
+    @classmethod
+    def StopDBInstance(cls, command):
+        instance = (
+            DBInstance.query
+            .filter(DBInstance.identifier == command['DBInstanceIdentifier'])
+            .one())
+        instance.status = 'stopping'
+        db.session.commit()
+        worker.stop_db_instance.send(instance.id)
+        return InstanceEncoder(instance).as_xml()
 
 
 RESPONSE_TMPL = Template("""\
@@ -125,4 +147,11 @@ class InstanceEncoder:
         self.instance = instance
 
     def as_xml(self):
-        return self.XML_SNIPPET_TMPL.render(**self.instance.__dict__)
+        try:
+            endpoint_address = self.instance.data['Endpoint']['Address']
+        except (KeyError, TypeError):
+            endpoint_address = None
+        return self.XML_SNIPPET_TMPL.render(
+            endpoint_address=endpoint_address,
+            **self.instance.__dict__,
+        )

@@ -9,6 +9,7 @@ import os
 from copy import deepcopy
 from string import ascii_lowercase
 from xml.etree import ElementTree as ET
+from time import sleep
 
 import libvirt
 
@@ -92,6 +93,7 @@ class LibVirtIaaS(IaaS):
         return pool.createXML(ET.tostring(xvol, encoding='unicode'))
 
     def create_machine(self, name, storage_pool, data_size_gb, **kw):
+        name = f"cornac-{name}"
         # The PoC reuses ressources until we have persistence of objects.
         try:
             domain = self.conn.lookupByName(name)
@@ -128,6 +130,40 @@ class LibVirtIaaS(IaaS):
         self.attach_disk(domain, disk)
 
         return domain
+
+    def start_machine(self, name, wait=True):
+        name = f"cornac-{name}"
+        domain = self.conn.lookupByName(name)
+        state, _ = domain.state()
+        if libvirt.VIR_DOMAIN_RUNNING == state:
+            logger.debug("Already running.")
+        else:
+            logger.info("Starting VM %s.", name)
+            domain.create()
+
+        while wait:
+            state, _ = domain.state()
+            if libvirt.VIR_DOMAIN_RUNNING == state:
+                break
+            else:
+                sleep(1)
+
+    def stop_machine(self, name, wait=True):
+        name = f"cornac-{name}"
+        domain = self.conn.lookupByName(name)
+        state, _ = domain.state()
+        if libvirt.VIR_DOMAIN_SHUTOFF == state:
+            logger.debug("Already stopped.")
+        else:
+            logger.info("Stopping VM %s.", name)
+            domain.shutdown()
+
+        while wait:
+            state, _ = domain.state()
+            if libvirt.VIR_DOMAIN_SHUTOFF == state:
+                break
+            else:
+                sleep(1)
 
     def endpoint(self, domain):
         # Let's DNS resolve machine IP for now.
