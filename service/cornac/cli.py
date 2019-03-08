@@ -111,8 +111,9 @@ def migratedb(dry):
 
 
 def entrypoint():
+    debug = os.environ.get('DEBUG', '').lower() in ('1', 'y')
     logging.basicConfig(
-        level=logging.DEBUG,
+        level=logging.DEBUG if debug else logging.INFO,
         format='%(levelname)1.1s: %(message)s',
     )
 
@@ -125,7 +126,7 @@ def entrypoint():
         exit(e.exit_code)
     except Exception:
         logger.exception('Unhandled error:')
-        if sys.stdout.isatty():
+        if debug and sys.stdout.isatty():
             logger.debug("Dropping in debugger.")
             pdb.post_mortem(sys.exc_info()[2])
         else:
