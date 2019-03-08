@@ -36,8 +36,10 @@ class KnownError(Exception):
 
 # Root group of CLI.
 @click.group(cls=FlaskGroup, create_app=create_app)
-def root(argv=sys.argv[1:]):
-    pass
+@click.option('--verbose/-v', default=False)
+def root(verbose):
+    if verbose:
+        logging.getLogger().setLevel(logging.DEBUG)
 
 
 @root.command(help=dedent(
