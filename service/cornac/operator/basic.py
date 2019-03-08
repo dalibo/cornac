@@ -26,7 +26,7 @@ class BasicOperator(object):
         # original_machine: name of the template machine with Postgres.
 
     def create_db_instance(self, command):
-        name = f"cornac-{command['DBInstanceIdentifier']}"
+        name = command['DBInstanceIdentifier']
         machine = self.iaas.create_machine(
             name=name,
             storage_pool=self.config['STORAGE_POOL'],
@@ -66,16 +66,15 @@ class BasicOperator(object):
 
         # Creating database
         bases = shell([helper, "psql", "-l"])
-        dbname = command['DBInstanceIdentifier']
-        if f"\n {dbname} " in bases:
-            logger.debug("Reusing database %s.", dbname)
+        if f"\n {name} " in bases:
+            logger.debug("Reusing database %s.", name)
         else:
-            logger.debug("Creating database %s.", dbname)
-            shell([helper, "create-database", dbname, master])
+            logger.debug("Creating database %s.", name)
+            shell([helper, "create-database", name, master])
 
         return dict(
             Endpoint=dict(Address=address, Port=5432),
-            DBInstanceIdentifier=dbname,
+            DBInstanceIdentifier=name,
         )
 
 

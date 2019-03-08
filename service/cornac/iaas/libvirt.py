@@ -92,6 +92,7 @@ class LibVirtIaaS(IaaS):
         return pool.createXML(ET.tostring(xvol, encoding='unicode'))
 
     def create_machine(self, name, storage_pool, data_size_gb, **kw):
+        name = f"cornac-{name}"
         # The PoC reuses ressources until we have persistence of objects.
         try:
             domain = self.conn.lookupByName(name)
