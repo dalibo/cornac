@@ -81,6 +81,17 @@ class RDS(object):
         return cls.INSTANCE_LIST_TMPL.render(
             instances=[InstanceEncoder(i) for i in instances])
 
+    @classmethod
+    def StopDBInstance(cls, command):
+        instance = (
+            DBInstance.query
+            .filter(DBInstance.identifier == command['DBInstanceIdentifier'])
+            .one())
+        instance.status = 'stopping'
+        db.session.commit()
+        worker.stop_db_instance.send(instance.id)
+        return InstanceEncoder(instance).as_xml()
+
 
 RESPONSE_TMPL = Template("""\
 <{{ action }}Response xmlns="http://rds.amazonaws.com/doc/2014-10-31/">

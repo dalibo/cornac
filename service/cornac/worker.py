@@ -36,3 +36,12 @@ def create_db(instance_id):
         **response,
     )
     db.session.commit()
+
+
+@dramatiq.actor
+def stop_db_instance(instance_id):
+    instance = DBInstance.query.get(instance_id)
+    with IaaS.connect(current_app.config['IAAS'], current_app.config) as iaas:
+        iaas.stop_machine(instance.identifier)
+    instance.status = 'stopped'
+    db.session.commit()
