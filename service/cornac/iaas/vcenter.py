@@ -55,6 +55,7 @@ class vCenter(IaaS):
 
     def create_machine(
             self, name, storage_pool, data_size_gb=None, **kw):
+        name = f"cornac-{name}"
         logger.debug("Creating %s specification.", name)
         datastore = self.find(storage_pool)
         origin = self.find(self.config['ORIGINAL_MACHINE'])
@@ -92,10 +93,18 @@ class vCenter(IaaS):
         # https://communities.vmware.com/thread/298072
         return "/dev/sdb"
 
-    def start(self, machine):
+    def _ensure_machine(self, machine_or_name):
+        if isinstance(machine_or_name, str):
+            vmfolder = Path(self.config['ORIGINAL_MACHINE']).parent
+            machine_or_name = self.find(f"{vmfolder}/cornac-{machine_or_name}")
+        return machine_or_name
+
+    def start_machine(self, machine):
+        machine = self._ensure_machine(machine)
         return self.wait_task(machine.PowerOn())
 
-    def stop(self, machine):
+    def stop_machine(self, machine):
+        machine = self._ensure_machine(machine)
         return self.wait_task(machine.PowerOff())
 
     def sysprep(self, machine):
@@ -107,7 +116,7 @@ class vCenter(IaaS):
         ssh.copy(vhelper, "/usr/local/bin/vhelper.sh")
         logger.debug("Preparing system")
         ssh(["/usr/local/bin/vhelper.sh", "sysprep"])
-        self.stop(machine)
+        self.stop_machine(machine)
 
     def wait_task(self, task):
         # From pyvmomi samples.
