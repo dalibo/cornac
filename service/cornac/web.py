@@ -136,4 +136,11 @@ class InstanceEncoder:
         self.instance = instance
 
     def as_xml(self):
-        return self.XML_SNIPPET_TMPL.render(**self.instance.__dict__)
+        try:
+            endpoint_address = self.instance.data['Endpoint']['Address']
+        except (KeyError, TypeError):
+            endpoint_address = None
+        return self.XML_SNIPPET_TMPL.render(
+            endpoint_address=endpoint_address,
+            **self.instance.__dict__,
+        )
