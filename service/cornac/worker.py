@@ -26,8 +26,13 @@ def create_db(instance_id):
 
     with IaaS.connect(current_app.config['IAAS'], current_app.config) as iaas:
         operator = BasicOperator(iaas, current_app.config)
-        response = operator.create_db_instance(instance.create_command)
+        response = operator.create_db_instance(instance.data)
 
     instance.status = 'available'
-    instance.attributes = response
+    instance.data = dict(
+        instance.data,
+        # Drop password from data.
+        MasterUserPassword=None,
+        **response,
+    )
     db.session.commit()

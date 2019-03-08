@@ -35,6 +35,7 @@ CREATE TABLE db_instances (
   identifier TEXT UNIQUE,
   status db_instance_status NOT NULL,
   status_message TEXT,
-  create_command JSONb,
-  attributes JSONb
+  "data" JSONb,
+  iaas_data JSONb,
+  operator_data JSONb
 );

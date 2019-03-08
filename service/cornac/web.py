@@ -59,7 +59,7 @@ class RDS(object):
         instance = DBInstance()
         instance.identifier = command['DBInstanceIdentifier']
         instance.status = 'creating'
-        instance.create_command = command
+        instance.data = command
         db.session.add(instance)
         db.session.commit()
 

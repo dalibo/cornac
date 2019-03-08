@@ -55,5 +55,6 @@ class DBInstance(db.Model):
     identifier = db.Column(db.String)
     status = db.Column(DBInstanceStatus)
     status_message = db.Column(db.String)
-    create_command = db.Column(JSONB)
-    attributes = db.Column(JSONB)
+    data = db.Column(JSONB)
+    iaas_data = db.Column(JSONB)
+    operator_data = db.Column(JSONB)
