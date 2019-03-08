@@ -32,7 +32,7 @@ class BasicOperator(object):
             storage_pool=self.config['STORAGE_POOL'],
             data_size_gb=command['AllocatedStorage'],
         )
-        self.iaas.start(machine)
+        self.iaas.start_machine(machine)
         address = self.iaas.endpoint(machine)
         shell = RemoteShell('root', address)
         shell.wait()
