@@ -131,6 +131,23 @@ class LibVirtIaaS(IaaS):
 
         return domain
 
+    def start_machine(self, name, wait=True):
+        name = f"cornac-{name}"
+        domain = self.conn.lookupByName(name)
+        state, _ = domain.state()
+        if libvirt.VIR_DOMAIN_RUNNING == state:
+            logger.debug("Already running.")
+        else:
+            logger.info("Starting VM %s.", name)
+            domain.create()
+
+        while wait:
+            state, _ = domain.state()
+            if libvirt.VIR_DOMAIN_RUNNING == state:
+                break
+            else:
+                sleep(1)
+
     def stop_machine(self, name, wait=True):
         name = f"cornac-{name}"
         domain = self.conn.lookupByName(name)
