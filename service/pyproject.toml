@@ -18,6 +18,8 @@ flask-dramatiq = "^0.2.2"
 
 [tool.poetry.dev-dependencies]
 flake8 = "^3.7"
+sh = "^1.12"
+pytest = "^4.3"
 
 [tool.poetry.extras]
 libvirt = ["libvirt-python"]

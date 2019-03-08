@@ -132,6 +132,23 @@ class LibVirtIaaS(IaaS):
 
         return domain
 
+    def delete_machine(self, domain):
+        domain = self._ensure_domain(domain)
+        state, _ = domain.state()
+        if libvirt.VIR_DOMAIN_RUNNING == state:
+            domain.destroy()
+        domain.undefineFlags(
+            libvirt.VIR_DOMAIN_UNDEFINE_MANAGED_SAVE |
+            libvirt.VIR_DOMAIN_UNDEFINE_NVRAM |
+            libvirt.VIR_DOMAIN_UNDEFINE_SNAPSHOTS_METADATA |
+            0
+        )
+
+    def list_machines(self):
+        for domain in self.conn.listAllDomains():
+            if domain.name().startswith('cornac-'):
+                yield domain
+
     def _ensure_domain(self, domain_or_name):
         if isinstance(domain_or_name, str):
             name = f"cornac-{domain_or_name}"
