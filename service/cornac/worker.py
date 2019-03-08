@@ -44,7 +44,7 @@ def start_db_instance(instance_id):
     instance = DBInstance.query.get(instance_id)
     with IaaS.connect(current_app.config['IAAS'], current_app.config) as iaas:
         iaas.start_machine(instance.identifier)
-    wait_machine(instance.data['Entrypoint']['Address'])
+    wait_machine(instance.data['Endpoint']['Address'])
     instance.status = 'available'
     db.session.commit()
 

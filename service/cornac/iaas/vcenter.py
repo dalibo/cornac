@@ -101,11 +101,19 @@ class vCenter(IaaS):
 
     def start_machine(self, machine):
         machine = self._ensure_machine(machine)
-        return self.wait_task(machine.PowerOn())
+        if 'poweredOn' == machine.runtime.powerState:
+            logger.debug("Already started.")
+        else:
+            logger.debug("Powering %s on.", machine)
+            return self.wait_task(machine.PowerOn())
 
     def stop_machine(self, machine):
         machine = self._ensure_machine(machine)
-        return self.wait_task(machine.PowerOff())
+        if 'poweredOff' == machine.runtime.powerState:
+            logger.debug("Already stopped.")
+        else:
+            logger.debug("Powering %s off.", machine)
+            return self.wait_task(machine.PowerOff())
 
     def sysprep(self, machine):
         endpoint = self.endpoint(machine)
