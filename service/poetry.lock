@@ -48,7 +48,7 @@ description = "Postgres Broker for Dramatiq Task Queue"
 name = "dramatiq-pg"
 optional = false
 python-versions = ">=3.5,<4.0"
-version = "0.3.0"
+version = "0.4.1"
 
 [package.dependencies]
 dramatiq = ">=1.5,<2.0"
@@ -212,7 +212,7 @@ description = "pytest: simple powerful testing with Python"
 name = "pytest"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
-version = "4.3.0"
+version = "4.3.1"
 
 [package.dependencies]
 atomicwrites = ">=1.0"
@@ -249,7 +249,7 @@ description = "Database Abstraction Library"
 name = "sqlalchemy"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
-version = "1.3.0"
+version = "1.3.1"
 
 [[package]]
 category = "main"
@@ -277,7 +277,7 @@ psycopg2-binary = []
 vmware = []
 
 [metadata]
-content-hash = "2c20a01768266de4e8ca585fc30d3b2e58629e17ebd1d82d15b9775a4cee7c12"
+content-hash = "0cf93d2f240ea99941e9bd0e2af1addb4d098df3c1f31c7209a46a0a33bf2214"
 python-versions = "^3.6"
 
 [metadata.hashes]
@@ -286,7 +286,7 @@ attrs = ["69c0dbf2ed392de1cb5ec704444b08a5ef81680a61cb899dc08127123af36a79", "f0
 click = ["2335065e6395b9e67ca716de5f7526736bfa6ceead690adf616d925bdc622b13", "5b94b49521f6456670fdb30cd82a4eca9412788a93fa6dd6df72c94d5a8ff2d7"]
 colorama = ["05eed71e2e327246ad6b38c540c4a3117230b19679b875190486ddd2d721422d", "f8ac84de7840f5b9c4e3347b3c1eaa50f7e49c2b07596221daec5edaabbd7c48"]
 dramatiq = ["2ba322cc93bd218bb9838cf8181ea162a8eaaf4220f6c29f43ae25e17a47250c", "f2a19cabf090117d29bf156f1d765fa84972d09e0e31ad4e5958c52c0574377a"]
-dramatiq-pg = ["2abbb7572170f4a7b3885a4859ef60654c58a898a71832786054c25aecb3a10f", "70207dd160fc63088bf5703032eecf61e1c4a7a766912962a7a6c154c0aaf18b"]
+dramatiq-pg = ["1480ef89582cef9407fde65a82d7777d92ec76131e49d1dfcf8b42fd182381a1", "6232ad2c4f108b75b5589bbd848d9abca0d637a2927d336fd70cd08aca9ee9f2"]
 entrypoints = ["589f874b313739ad35be6e0cd7efde2a4e9b6fea91edcc34e58ecbb8dbe56d19", "c70dd71abe5a8c85e55e12c19bd91ccfeec11a6e99044204511f9ed547d48451"]
 flake8 = ["859996073f341f2670741b51ec1e67a01da142831aa1fdc6242dbf88dffbe661", "a796a115208f5c03b18f332f7c11729812c8c3ded6c46319c59b53efd3819da8"]
 flask = ["2271c0070dbcb5275fad4a82e29f23ab92682dc45f9dfbc22c02ba9b9322ce48", "a080b744b7e345ccfcbc77954861cb05b3c63786e93f2b3875e0913d44b43f05"]
@@ -303,9 +303,9 @@ psycopg2 = ["02445ebbb3a11a3fe8202c413d5e6faf38bb75b4e336203ee144ca2c46529f94", 
 py = ["64f65755aee5b381cea27766a3a147c3f15b9b6b9ac88676de66ba2ae36793fa", "dc639b046a6e2cff5bbe40194ad65936d6ba360b52b3c3fe1d08a82dd50b5e53"]
 pycodestyle = ["95a2219d12372f05704562a14ec30bc76b05a5b297b21a5dfe3f6fac3491ae56", "e40a936c9a450ad81df37f549d676d127b1b66000a6c500caa2b085bc0ca976c"]
 pyflakes = ["17dbeb2e3f4d772725c777fabc446d5634d1038f234e77343108ce445ea69ce0", "d976835886f8c5b31d47970ed689944a0262b5f3afa00a5a7b4dc81e5449f8a2"]
-pytest = ["067a1d4bf827ffdd56ad21bd46674703fce77c5957f6c1eef731f6146bfcef1c", "9687049d53695ad45cf5fdc7bbd51f0c49f1ea3ecfc4b7f3fde7501b541f17f4"]
+pytest = ["592eaa2c33fae68c7d75aacf042efc9f77b27c08a6224a4f59beab8d9a420523", "ad3ad5c450284819ecde191a654c09b0ec72257a2c711b9633d677c71c9850c4"]
 sh = ["ae3258c5249493cebe73cb4e18253a41ed69262484bad36fdb3efcb8ad8870bb", "b52bf5833ed01c7b5c5fb73a7f71b3d98d48e9b9b8764236237bdc7ecae850fc"]
 six = ["3350809f0555b11f552448330d0b52d5f24c91a322ea4a15ef22629740f3761c", "d16a0141ec1a18405cd4ce8b4613101da75da0e9a7aec5bdd4fa804d0e0eba73"]
-sqlalchemy = ["11ead7047ff3f394ed0d4b62aded6c5d970a9b718e1dc6add9f5e79442cc5b14"]
+sqlalchemy = ["781fb7b9d194ed3fc596b8f0dd4623ff160e3e825dd8c15472376a438c19598b"]
 tenacity = ["24b7f302a1caa1801e58b39ea557129c095966e64e5b1ddad3c93a6cb033e38b", "a04b97b3bda047f912a75d110dde3e746891b5548b6bec6d157cd100f2d4afac"]
 werkzeug = ["c3fd7a7d41976d9f44db327260e263132466836cef6f91512889ed60ad26557c", "d5da73735293558eb1651ee2fddc4d0dedcfa06538b8813a2e20011583c9e49b"]
