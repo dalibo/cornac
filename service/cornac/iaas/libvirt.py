@@ -14,6 +14,7 @@ from time import sleep
 import libvirt
 
 from . import IaaS
+from ..utils import Timeout
 from ..ssh import logged_cmd
 
 
@@ -131,39 +132,28 @@ class LibVirtIaaS(IaaS):
 
         return domain
 
-    def start_machine(self, name, wait=True):
-        name = f"cornac-{name}"
-        domain = self.conn.lookupByName(name)
+    def delete_machine(self, domain):
+        domain = self._ensure_domain(domain)
         state, _ = domain.state()
         if libvirt.VIR_DOMAIN_RUNNING == state:
-            logger.debug("Already running.")
-        else:
-            logger.info("Starting VM %s.", name)
-            domain.create()
+            domain.destroy()
+        domain.undefineFlags(
+            libvirt.VIR_DOMAIN_UNDEFINE_MANAGED_SAVE |
+            libvirt.VIR_DOMAIN_UNDEFINE_NVRAM |
+            libvirt.VIR_DOMAIN_UNDEFINE_SNAPSHOTS_METADATA |
+            0
+        )
 
-        while wait:
-            state, _ = domain.state()
-            if libvirt.VIR_DOMAIN_RUNNING == state:
-                break
-            else:
-                sleep(1)
+    def list_machines(self):
+        for domain in self.conn.listAllDomains():
+            if domain.name().startswith('cornac-'):
+                yield domain
 
-    def stop_machine(self, name, wait=True):
-        name = f"cornac-{name}"
-        domain = self.conn.lookupByName(name)
-        state, _ = domain.state()
-        if libvirt.VIR_DOMAIN_SHUTOFF == state:
-            logger.debug("Already stopped.")
-        else:
-            logger.info("Stopping VM %s.", name)
-            domain.shutdown()
-
-        while wait:
-            state, _ = domain.state()
-            if libvirt.VIR_DOMAIN_SHUTOFF == state:
-                break
-            else:
-                sleep(1)
+    def _ensure_domain(self, domain_or_name):
+        if isinstance(domain_or_name, str):
+            name = f"cornac-{domain_or_name}"
+            domain_or_name = self.conn.lookupByName(name)
+        return domain_or_name
 
     def endpoint(self, domain):
         # Let's DNS resolve machine IP for now.
@@ -194,11 +184,39 @@ class LibVirtIaaS(IaaS):
             **xdiskaddress.attrib)
         return f'/dev/disk/by-path/{pci_path}-{scsi_path}'
 
-    def start(self, domain):
+    def start_machine(self, domain, wait=300):
+        domain = self._ensure_domain(domain)
+        name = domain.name()
+        state, _ = domain.state()
+        if libvirt.VIR_DOMAIN_RUNNING == state:
+            logger.debug("VM %s running.", name)
+        else:
+            logger.info("Starting VM %s.", name)
+            domain.create()
+        self.wait_state(domain, libvirt.VIR_DOMAIN_RUNNING, wait)
+
+    def stop_machine(self, domain, wait=60):
+        domain = self._ensure_domain(domain)
+        name = domain.name()
         state, _ = domain.state()
         if libvirt.VIR_DOMAIN_SHUTOFF == state:
-            logger.debug("Starting %s.", domain.name())
-            domain.create()
-        state, _ = domain.state()
-        if libvirt.VIR_DOMAIN_RUNNING != state:
-            raise Exception("%s is not running" % domain.name())
+            logger.debug("VM %s stopped.", name)
+        else:
+            logger.info("Stopping VM %s.", name)
+            domain.shutdown()
+
+        self.wait_state(domain, libvirt.VIR_DOMAIN_SHUTOFF, wait)
+
+    def wait_state(self, domain, wanted, wait=60):
+        if not wait:
+            return
+
+        for _ in range(int(wait)):
+            state, _ = domain.state()
+            if wanted == state:
+                break
+            else:
+                sleep(1)
+            wait -= 1
+        else:
+            raise Timeout()

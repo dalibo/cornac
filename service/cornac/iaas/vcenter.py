@@ -78,6 +78,13 @@ class vCenter(IaaS):
         self.sysprep(machine)
         return machine
 
+    def delete_machine(self, machine):
+        machine = self._ensure_machine(machine)
+        if 'poweredOn' == machine.runtime.powerState:
+            self.wait_task(machine.PowerOff())
+            self.wait_change(machine, 'runtime.powerState')
+        return self.wait_task(machine.Destroy_Task())
+
     def endpoint(self, machine):
         return machine.name + self.config['DNS_DOMAIN']
 
@@ -92,6 +99,15 @@ class vCenter(IaaS):
         # spec. Let's assume things are simple and reproducible. cf.
         # https://communities.vmware.com/thread/298072
         return "/dev/sdb"
+
+    def list_machines(self):
+        for child in self.si.content.rootFolder.childEntity:
+            if not hasattr(child, 'vmFolder'):
+                continue
+
+            for machine in child.vmFolder.childEntity:
+                if machine.name.startswith('cornac-'):
+                    yield machine
 
     def _ensure_machine(self, machine_or_name):
         if isinstance(machine_or_name, str):
@@ -109,11 +125,13 @@ class vCenter(IaaS):
 
     def stop_machine(self, machine):
         machine = self._ensure_machine(machine)
+
         if 'poweredOff' == machine.runtime.powerState:
-            logger.debug("Already stopped.")
-        else:
-            logger.debug("Powering %s off.", machine)
-            return self.wait_task(machine.PowerOff())
+            return logger.debug("Already stopped.")
+
+        logger.debug("Shuting down %s.", machine)
+        machine.ShutdownGuest()
+        self.wait_change(machine, 'runtime.powerState')
 
     def sysprep(self, machine):
         endpoint = self.endpoint(machine)
@@ -124,7 +142,27 @@ class vCenter(IaaS):
         ssh.copy(vhelper, "/usr/local/bin/vhelper.sh")
         logger.debug("Preparing system")
         ssh(["/usr/local/bin/vhelper.sh", "sysprep"])
+        if 'toolsOk' != machine.guest.toolsStatus:
+            self.wait_change(machine, 'guest.toolStatus')
         self.stop_machine(machine)
+
+    def wait_change(self, obj, proppath):
+        propSpec = vmodl.query.PropertyCollector.PropertySpec(
+            type=type(obj), all=False, pathSet=[proppath])
+        filterSpec = vmodl.query.PropertyCollector.FilterSpec(
+            objectSet=[vmodl.query.PropertyCollector.ObjectSpec(obj=obj)],
+            propSet=[propSpec],
+        )
+
+        pc = self.si.content.propertyCollector
+        waitopts = vmodl.query.PropertyCollector.WaitOptions(
+            maxWaitSeconds=300)
+        pcFilter = pc.CreateFilter(filterSpec, partialUpdates=True)
+        try:
+            initset = pc.WaitForUpdatesEx(version='', options=waitopts)
+            return pc.WaitForUpdatesEx(initset.version, options=waitopts)
+        finally:
+            pcFilter.Destroy()
 
     def wait_task(self, task):
         # From pyvmomi samples.

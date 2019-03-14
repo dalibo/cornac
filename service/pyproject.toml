@@ -13,11 +13,14 @@ flask = "^1.0"
 click = "^7.0"
 flask-sqlalchemy = "^2.3"
 tenacity = "^5.0"
-dramatiq-pg = "^0.3.0"
+dramatiq-pg = "~0.4.1"
 flask-dramatiq = "^0.2.2"
 
 [tool.poetry.dev-dependencies]
 flake8 = "^3.7"
+sh = "^1.12"
+pytest = "^4.3"
+flask-shell-ptpython = "^1.0"
 
 [tool.poetry.extras]
 libvirt = ["libvirt-python"]

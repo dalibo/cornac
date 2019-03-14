@@ -36,8 +36,10 @@ class KnownError(Exception):
 
 # Root group of CLI.
 @click.group(cls=FlaskGroup, create_app=create_app)
-def root(argv=sys.argv[1:]):
-    pass
+@click.option('--verbose/-v', default=False)
+def root(verbose):
+    if verbose:
+        logging.getLogger().setLevel(logging.DEBUG)
 
 
 @root.command(help=dedent(
@@ -111,8 +113,9 @@ def migratedb(dry):
 
 
 def entrypoint():
+    debug = os.environ.get('DEBUG', '').lower() in ('1', 'y')
     logging.basicConfig(
-        level=logging.DEBUG,
+        level=logging.DEBUG if debug else logging.INFO,
         format='%(levelname)1.1s: %(message)s',
     )
 
@@ -125,7 +128,7 @@ def entrypoint():
         exit(e.exit_code)
     except Exception:
         logger.exception('Unhandled error:')
-        if sys.stdout.isatty():
+        if debug and sys.stdout.isatty():
             logger.debug("Dropping in debugger.")
             pdb.post_mortem(sys.exc_info()[2])
         else:
