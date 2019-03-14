@@ -20,6 +20,7 @@ flask-dramatiq = "^0.2.2"
 flake8 = "^3.7"
 sh = "^1.12"
 pytest = "^4.3"
+flask-shell-ptpython = "^1.0"
 
 [tool.poetry.extras]
 libvirt = ["libvirt-python"]
