@@ -81,7 +81,7 @@ class BasicOperator(object):
 def test_main():
     # Hard coded real test case, for PoC development.
 
-    from .. import config
+    from flask import current_app as app
 
     # What aws would send to REST API.
     command = {
@@ -94,8 +94,8 @@ def test_main():
         'MasterUserPassword': 'C0nfidentiel',
     }
 
-    with IaaS.connect(config['IAAS'], config) as iaas:
-        operator = BasicOperator(iaas, config)
+    with IaaS.connect(app.config['IAAS'], app.config) as iaas:
+        operator = BasicOperator(iaas, app.config)
         response = operator.create_db_instance(command)
 
     logger.info(
@@ -108,13 +108,16 @@ def test_main():
 
 
 if "__main__" == __name__:
+    from cornac import create_app
+
     logging.basicConfig(
         format="%(levelname)5.5s %(message)s",
         level=logging.DEBUG,
     )
-
+    app = create_app()
     try:
-        test_main()
+        with app.app_context():
+            test_main()
     except pdb.bdb.BdbQuit:
         pass
     except Exception:
