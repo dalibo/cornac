@@ -148,9 +148,6 @@ class vCenter(IaaS):
         ssh.copy(vhelper, "/usr/local/bin/vhelper.sh")
         logger.debug("Preparing system")
         ssh(["/usr/local/bin/vhelper.sh", "sysprep"])
-        if 'toolsOk' != machine.guest.toolsStatus:
-            self.wait_change(machine, 'guest.toolsStatus')
-        self.stop_machine(machine)
 
     def wait_change(self, obj, proppath):
         propSpec = vmodl.query.PropertyCollector.PropertySpec(
