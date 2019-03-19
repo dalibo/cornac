@@ -1,6 +1,9 @@
 import os
+from subprocess import Popen
+from time import sleep
 
 import pytest
+import requests.exceptions
 
 from cornac import create_app
 from cornac.iaas import IaaS
@@ -13,12 +16,6 @@ def app():
         yield app
 
 
-@pytest.fixture(scope='session')
-def iaas(app):
-    with IaaS.connect(app.config['IAAS'], app.config) as iaas:
-        yield iaas
-
-
 @pytest.fixture(scope='session', autouse=True)
 def clean_vms(iaas):
     yield None
@@ -26,3 +23,45 @@ def clean_vms(iaas):
         return
     for machine in iaas.list_machines():
         iaas.delete_machine(machine)
+
+
+def http_wait(url):
+    for _ in range(32):
+        try:
+            return requests.get(url)
+        except requests.exceptions.ConnectionError:
+            sleep(.1)
+        except Exception as e:
+            return e
+    else:
+        raise Exception("Failed to start HTTP server on time.")
+
+
+@pytest.fixture(scope='session')
+def iaas(app):
+    with IaaS.connect(app.config['IAAS'], app.config) as iaas:
+        yield iaas
+
+
+@pytest.fixture(scope='session')
+def rds():
+    proc = Popen(["cornac", "--verbose", "run"])
+    http_wait('http://localhost:5000/rds')
+    try:
+        yield proc
+    finally:
+        proc.terminate()
+        proc.wait()
+
+
+@pytest.fixture(scope='session')
+def worker():
+    proc = Popen([
+        "cornac", "--verbose", "worker",
+        "--processes=1", "--threads=2",
+    ])
+    try:
+        yield proc
+    finally:
+        proc.terminate()
+        proc.communicate()
