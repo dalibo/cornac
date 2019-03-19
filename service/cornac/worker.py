@@ -40,6 +40,18 @@ def create_db(instance_id):
 
 
 @dramatiq.actor
+def delete_db_instance(instance_id):
+    instance = DBInstance.query.get(instance_id)
+    if instance is None:
+        return logger.warn("Unknown instance #%s. Deleted ?", instance_id)
+
+    with IaaS.connect(current_app.config['IAAS'], current_app.config) as iaas:
+        iaas.delete_machine(instance.identifier)
+    db.session.delete(instance)
+    db.session.commit()
+
+
+@dramatiq.actor
 def start_db_instance(instance_id):
     instance = DBInstance.query.get(instance_id)
     with IaaS.connect(current_app.config['IAAS'], current_app.config) as iaas:

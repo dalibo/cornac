@@ -75,6 +75,17 @@ class RDS(object):
 
         return InstanceEncoder(instance).as_xml()
 
+    @classmethod
+    def DeleteDBInstance(cls, command):
+        instance = (
+            DBInstance.query
+            .filter(DBInstance.identifier == command['DBInstanceIdentifier'])
+            .one())
+        instance.status = 'deleting'
+        worker.delete_db_instance.send(instance.id)
+        db.session.commit()
+        return InstanceEncoder(instance).as_xml()
+
     INSTANCE_LIST_TMPL = Template(dedent("""\
     <DBInstances>
     {% for instance in instances %}

@@ -1,7 +1,11 @@
 import json
+import logging
 from time import sleep
 
 from sh import aws
+
+
+logger = logging.getLogger(__name__)
 
 
 def test_describe_db_instances(rds):
@@ -35,3 +39,27 @@ def test_create_db_instance(rds, worker):
             break
     else:
         raise Exception("Timeout creating database instance.")
+
+
+def test_delete_db_instance(rds, worker):
+    cmd = aws(
+        "rds", "delete-db-instance",
+        "--db-instance-identifier", "test0",
+    )
+    out = json.loads(cmd.stdout)
+    assert 'deleting' == out['DBInstance']['DBInstanceStatus']
+
+    for s in range(0, 60):
+        sleep(s / 2.)
+        try:
+            cmd = aws(
+                "rds", "describe-db-instances",
+                "--db-instance-identifier", "test0")
+            out = json.loads(cmd.stdout)
+            if 'continue' == out['DBInstances'][0]['DBInstanceStatus']:
+                continue
+        except Exception as e:
+            logger.warning("Can't describe db instance anymore: %s", e)
+            break
+    else:
+        raise Exception("Timeout deleting database instance.")
