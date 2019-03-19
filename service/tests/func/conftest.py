@@ -54,6 +54,12 @@ def rds():
         proc.wait()
 
 
+@pytest.fixture(autouse=True)
+def reset_logs(caplog, capsys):
+    caplog.clear()
+    capsys.readouterr()
+
+
 @pytest.fixture(scope='session')
 def worker():
     proc = Popen([
