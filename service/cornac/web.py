@@ -85,7 +85,11 @@ class RDS(object):
 
     @classmethod
     def DescribeDBInstances(cls, command):
-        instances = DBInstance.query.all()
+        qry = DBInstance.query
+        if 'DBInstanceIdentifier' in command:
+            qry = qry.filter(
+                DBInstance.identifier == command['DBInstanceIdentifier'])
+        instances = qry.all()
         return cls.INSTANCE_LIST_TMPL.render(
             instances=[InstanceEncoder(i) for i in instances])
 
