@@ -39,7 +39,7 @@ class KnownError(Exception):
 @click.option('--verbose/-v', default=False)
 def root(verbose):
     if verbose:
-        logging.getLogger().setLevel(logging.DEBUG)
+        logging.getLogger('cornac').setLevel(logging.DEBUG)
 
 
 @root.command(help=dedent(
@@ -115,9 +115,11 @@ def migratedb(dry):
 def entrypoint():
     debug = os.environ.get('DEBUG', '').lower() in ('1', 'y')
     logging.basicConfig(
-        level=logging.DEBUG if debug else logging.INFO,
+        level=logging.INFO,
         format='%(levelname)1.1s: %(message)s',
     )
+    if debug:
+        logging.getLogger('cornac').setLevel(logging.DEBUG)
 
     try:
         exit(root())
