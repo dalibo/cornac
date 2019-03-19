@@ -72,6 +72,12 @@ class vCenter(IaaS):
         locspec.pool = self.find(self.config['VCENTER_RESOURCE_POOL'])
         locspec.deviceChange.append(build_nic_spec(self.config['NETWORK']))
 
+        if len(origin.rootSnapshot):
+            sstree = origin.snapshot.rootSnapshotList[0]
+            logger.debug("Using linked clone from '%s'.", sstree.name)
+            clonespec.snapshot = sstree.snapshot
+            locspec.diskMoveType = 'createNewChildDiskBacking'
+
         logger.debug("Cloning %s as %s.", origin.name, name)
         task = origin.Clone(folder=origin.parent, name=name, spec=clonespec)
         machine = self.wait_task(task)
@@ -142,9 +148,6 @@ class vCenter(IaaS):
         ssh.copy(vhelper, "/usr/local/bin/vhelper.sh")
         logger.debug("Preparing system")
         ssh(["/usr/local/bin/vhelper.sh", "sysprep"])
-        if 'toolsOk' != machine.guest.toolsStatus:
-            self.wait_change(machine, 'guest.toolStatus')
-        self.stop_machine(machine)
 
     def wait_change(self, obj, proppath):
         propSpec = vmodl.query.PropertyCollector.PropertySpec(
