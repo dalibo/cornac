@@ -34,11 +34,19 @@ def main():
         logger.debug("payload=%r", payload)
         abort(400)
 
-    return make_response_xml(
-        action=action_name,
-        result=action(payload),
-        requestid=uuid4(),
-    )
+    identifier = payload.get('DBInstanceIdentifier', '-')
+    log_args = ("RDS %s %s", action_name, identifier)
+    try:
+        response = make_response_xml(
+            action=action_name,
+            result=action(payload),
+            requestid=uuid4(),
+        )
+        current_app.logger.info(*log_args)
+        return response
+    except Exception:
+        current_app.logger.exception(*log_args)
+        raise
 
 
 class RDS(object):
