@@ -23,7 +23,7 @@ def main():
     payload.pop('Version')
     identifier = payload.get('DBInstanceIdentifier', '-')
     requestid = uuid4()
-    log_args = ("RDS %s %s", action_name, identifier)
+    log_args = ("RDS %s %s %s", requestid, action_name, identifier)
 
     try:
         action = getattr(actions, action_name, None)
