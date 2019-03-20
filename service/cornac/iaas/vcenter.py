@@ -5,6 +5,7 @@
 #
 
 import logging
+from contextlib import contextmanager
 from pathlib import Path
 from urllib.parse import (
     parse_qs,
@@ -87,8 +88,10 @@ class vCenter(IaaS):
     def delete_machine(self, machine):
         machine = self._ensure_machine(machine)
         if 'poweredOn' == machine.runtime.powerState:
-            self.wait_task(machine.PowerOff())
-            self.wait_change(machine, 'runtime.powerState')
+            logger.debug("Powering off %s.", machine)
+            with self.wait_change(machine, 'runtime.powerState'):
+                self.wait_task(machine.PowerOff())
+        logger.debug("Destroying %s.", machine)
         return self.wait_task(machine.Destroy_Task())
 
     def endpoint(self, machine):
@@ -136,8 +139,8 @@ class vCenter(IaaS):
             return logger.debug("Already stopped.")
 
         logger.debug("Shuting down %s.", machine)
-        machine.ShutdownGuest()
-        self.wait_change(machine, 'runtime.powerState')
+        with self.wait_change(machine, 'runtime.powerState'):
+            machine.ShutdownGuest()
 
     def sysprep(self, machine):
         endpoint = self.endpoint(machine)
@@ -149,6 +152,7 @@ class vCenter(IaaS):
         logger.debug("Preparing system")
         ssh(["/usr/local/bin/vhelper.sh", "sysprep"])
 
+    @contextmanager
     def wait_change(self, obj, proppath):
         propSpec = vmodl.query.PropertyCollector.PropertySpec(
             type=type(obj), all=False, pathSet=[proppath])
@@ -163,6 +167,7 @@ class vCenter(IaaS):
         pcFilter = pc.CreateFilter(filterSpec, partialUpdates=True)
         try:
             initset = pc.WaitForUpdatesEx(version='', options=waitopts)
+            yield
             return pc.WaitForUpdatesEx(initset.version, options=waitopts)
         finally:
             pcFilter.Destroy()

@@ -34,11 +34,19 @@ def main():
         logger.debug("payload=%r", payload)
         abort(400)
 
-    return make_response_xml(
-        action=action_name,
-        result=action(payload),
-        requestid=uuid4(),
-    )
+    identifier = payload.get('DBInstanceIdentifier', '-')
+    log_args = ("RDS %s %s", action_name, identifier)
+    try:
+        response = make_response_xml(
+            action=action_name,
+            result=action(payload),
+            requestid=uuid4(),
+        )
+        current_app.logger.info(*log_args)
+        return response
+    except Exception:
+        current_app.logger.exception(*log_args)
+        raise
 
 
 class RDS(object):
@@ -67,6 +75,17 @@ class RDS(object):
 
         return InstanceEncoder(instance).as_xml()
 
+    @classmethod
+    def DeleteDBInstance(cls, command):
+        instance = (
+            DBInstance.query
+            .filter(DBInstance.identifier == command['DBInstanceIdentifier'])
+            .one())
+        instance.status = 'deleting'
+        worker.delete_db_instance.send(instance.id)
+        db.session.commit()
+        return InstanceEncoder(instance).as_xml()
+
     INSTANCE_LIST_TMPL = Template(dedent("""\
     <DBInstances>
     {% for instance in instances %}
@@ -77,7 +96,11 @@ class RDS(object):
 
     @classmethod
     def DescribeDBInstances(cls, command):
-        instances = DBInstance.query.all()
+        qry = DBInstance.query
+        if 'DBInstanceIdentifier' in command:
+            qry = qry.filter(
+                DBInstance.identifier == command['DBInstanceIdentifier'])
+        instances = qry.all()
         return cls.INSTANCE_LIST_TMPL.render(
             instances=[InstanceEncoder(i) for i in instances])
 

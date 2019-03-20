@@ -137,6 +137,14 @@ class LibVirtIaaS(IaaS):
         state, _ = domain.state()
         if libvirt.VIR_DOMAIN_RUNNING == state:
             domain.destroy()
+
+        xml = ET.fromstring(domain.XMLDesc())
+        for xsource in xml.findall('./devices/disk/source'):
+            file_ = xsource.attrib['file']
+            logger.debug("Deleting disk image %s.", file_)
+            os.unlink(file_)
+
+        logger.debug("Undefining domain %s.", domain.name())
         domain.undefineFlags(
             libvirt.VIR_DOMAIN_UNDEFINE_MANAGED_SAVE |
             libvirt.VIR_DOMAIN_UNDEFINE_NVRAM |
