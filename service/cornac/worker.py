@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 @dramatiq.actor
 def create_db(instance_id):
-    instance = DBInstance.query.filter(DBInstance.id == instance_id).one()
+    instance = DBInstance.query.get(instance_id)
 
     with IaaS.connect(current_app.config['IAAS'], current_app.config) as iaas:
         operator = BasicOperator(iaas, current_app.config)
