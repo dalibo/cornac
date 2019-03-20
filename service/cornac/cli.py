@@ -6,7 +6,7 @@
 # development and production should use WSGI entrypoint.
 #
 
-import logging
+import logging.config
 import os
 import pdb
 import sys
@@ -37,9 +37,10 @@ class KnownError(Exception):
 # Root group of CLI.
 @click.group(cls=FlaskGroup, create_app=create_app)
 @click.option('--verbose/-v', default=False)
-def root(verbose):
-    if verbose:
-        logging.getLogger('cornac').setLevel(logging.DEBUG)
+@click.pass_context
+def root(ctx, verbose):
+    appname = ctx.invoked_subcommand or 'cornac'
+    setup_logging(appname=appname, verbose=verbose)
 
 
 @root.command(help=dedent(
@@ -114,12 +115,7 @@ def migratedb(dry):
 
 def entrypoint():
     debug = os.environ.get('DEBUG', '').lower() in ('1', 'y')
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(levelname)1.1s: %(message)s',
-    )
-    if debug:
-        logging.getLogger('cornac').setLevel(logging.DEBUG)
+    setup_logging(verbose=debug)
 
     try:
         exit(root())
@@ -139,3 +135,35 @@ def entrypoint():
                 "https://github.com/dalibo/cornac/issues/new with full log.",
             )
     exit(os.EX_SOFTWARE)
+
+
+def setup_logging(*, appname='cornac', verbose):
+    format = '%(levelname)1.1s: %(message)s'
+    if verbose:
+        format = f'%(asctime)s {appname}[%(process)s] {format}'
+
+    config = {
+        'version': 1,
+        'formatters': {
+            'default': {
+                '()': 'logging.Formatter',
+                'format': format,
+            },
+        },
+        'handlers': {
+            'default': {
+                '()': 'logging.StreamHandler',
+                'formatter': 'default',
+            },
+        },
+        'root': {
+            'level': 'INFO',
+            'handlers': ['default'],
+        },
+        'loggers': {
+            __package__: {
+                'level': logging.DEBUG if verbose else logging.INFO,
+            },
+        },
+    }
+    logging.config.dictConfig(config)
