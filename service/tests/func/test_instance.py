@@ -2,6 +2,7 @@ import json
 import logging
 from time import sleep
 
+import psycopg2
 from sh import aws
 
 
@@ -39,6 +40,22 @@ def test_create_db_instance(rds, worker):
             break
     else:
         raise Exception("Timeout creating database instance.")
+
+
+def test_sql_to_endpoint(rds):
+    cmd = aws(
+        "rds", "describe-db-instances", "--db-instance-identifier", "test0")
+    out = json.loads(cmd.stdout)
+    instance, = out['DBInstances']
+    pgconn = psycopg2.connect(
+        host=instance['Endpoint']['Address'],
+        port=instance['Endpoint']['Port'],
+        user=instance['MasterUsername'],
+        password='C0nfidentiel',
+    )
+    with pgconn:
+        with pgconn.cursor() as curs:
+            curs.execute("SELECT NOW()")
 
 
 def test_delete_db_instance(rds, worker):
