@@ -49,7 +49,7 @@ create-database() {  #: <NAME> <OWNER> [CREATEDB_ARG ...]
 	#: Create database with some defaults.
 	local name=$1; shift
 	local owner=$1; shift
-	sudo -u postgres createdb --locale en_US.UTF-8 -O "${owner}" "$@" "${name}"
+	sudo -iu postgres createdb --locale en_US.UTF-8 -O "${owner}" "$@" "${name}"
 }
 
 
@@ -90,7 +90,7 @@ create-instance() {  #: <VERSION>
 	PGWAL=$(readlink -m ~postgres/managed/wal_mnt/wal)
 	mkdir --parent $PGDATA $PGWAL
 	chown -R postgres: ~postgres/managed
-	sudo -u postgres $bindir/initdb \
+	sudo -iu postgres $bindir/initdb \
 	     --auth-local peer \
 	     --auth-host md5 \
 	     --pgdata $PGDATA \
@@ -103,8 +103,8 @@ create-instance() {  #: <VERSION>
 	EOF
 	_log "Accepting connection from world."
 	sed -i s,127.0.0.1/32,0.0.0.0/0,g $PGDATA/pg_hba.conf
-	sudo -u postgres mkdir -p $PGDATA/conf.d
-	sudo -u postgres tee $PGDATA/conf.d/00-managed.conf >/dev/null <<-EOF
+	sudo -iu postgres mkdir -p $PGDATA/conf.d
+	sudo -iu postgres tee $PGDATA/conf.d/00-managed.conf >/dev/null <<-EOF
 	#
 	# Managed file. Don't edit manually.
 	#
