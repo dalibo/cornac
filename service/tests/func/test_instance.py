@@ -30,7 +30,7 @@ def test_create_db_instance(rds, worker):
     out = json.loads(cmd.stdout)
     assert 'creating' == out['DBInstance']['DBInstanceStatus']
 
-    for s in range(25, 1, -1):  # This waits up to 325s
+    for s in range(30, 1, -1):  # This waits up to 464s
         sleep(s)
         cmd = aws(
             "rds", "describe-db-instances",
