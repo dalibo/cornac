@@ -2,8 +2,6 @@ import logging
 
 from flask import current_app
 from flask_dramatiq import Dramatiq
-from dramatiq_pg import PostgresBroker
-from psycopg2.pool import ThreadedConnectionPool
 
 from .core.model import DBInstance, db
 from .iaas import IaaS
@@ -13,12 +11,6 @@ from .ssh import wait_machine
 
 dramatiq = Dramatiq()
 logger = logging.getLogger(__name__)
-
-
-class URLPostgresBroker(PostgresBroker):
-    def __init__(self, url):
-        super(URLPostgresBroker, self).__init__(
-            pool=ThreadedConnectionPool(0, 16, url))
 
 
 @dramatiq.actor
