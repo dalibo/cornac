@@ -1,4 +1,6 @@
 import os
+import sys
+from functools import partial
 from subprocess import Popen
 from time import sleep
 
@@ -58,6 +60,21 @@ def rds():
 def reset_logs(caplog, capsys):
     caplog.clear()
     capsys.readouterr()
+
+
+def lazy_write(attr, data):
+    # Lazy access sys.{stderr,stdout} to mix with capsys.
+    return getattr(sys, attr).write(data)
+
+
+@pytest.fixture(scope='session', autouse=True)
+def sh_errout():
+    import sh
+    sh._SelfWrapper__self_module.Command._call_args.update(dict(
+        err=partial(lazy_write, 'stderr'),
+        out=partial(lazy_write, 'stdout'),
+        tee=True,
+    ))
 
 
 @pytest.fixture(scope='session')
