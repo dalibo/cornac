@@ -105,6 +105,17 @@ class RDS(object):
             instances=[InstanceEncoder(i) for i in instances])
 
     @classmethod
+    def RebootDBInstance(cls, command):
+        instance = (
+            DBInstance.query
+            .filter(DBInstance.identifier == command['DBInstanceIdentifier'])
+            .one())
+        instance.status = 'rebooting'
+        db.session.commit()
+        worker.reboot_db_instance.send(instance.id)
+        return InstanceEncoder(instance).as_xml()
+
+    @classmethod
     def StartDBInstance(cls, command):
         instance = (
             DBInstance.query

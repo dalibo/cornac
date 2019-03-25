@@ -53,6 +53,18 @@ def delete_db_instance(instance_id):
 
 
 @dramatiq.actor
+def reboot_db_instance(instance_id):
+    instance = DBInstance.query.get(instance_id)
+    logger.info("Rebooting %s.", instance)
+    with IaaS.connect(current_app.config['IAAS'], current_app.config) as iaas:
+        iaas.stop_machine(instance.identifier)
+        iaas.start_machine(instance.identifier)
+    wait_machine(instance.data['Endpoint']['Address'])
+    instance.status = 'available'
+    db.session.commit()
+
+
+@dramatiq.actor
 def start_db_instance(instance_id):
     instance = DBInstance.query.get(instance_id)
     logger.info("Starting %s.", instance)

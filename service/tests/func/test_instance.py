@@ -1,5 +1,6 @@
 import json
 import logging
+from contextlib import contextmanager
 from time import sleep
 
 import psycopg2
@@ -7,6 +8,20 @@ from sh import aws
 
 
 logger = logging.getLogger(__name__)
+
+
+@contextmanager
+def pgconnect(instance, **kw):
+    kw = dict(
+        host=instance['Endpoint']['Address'],
+        port=instance['Endpoint']['Port'],
+        user=instance['MasterUsername'],
+        dbname=instance['DBInstanceIdentifier'],
+        **kw
+    )
+    with psycopg2.connect(**kw) as conn:
+        with conn.cursor() as curs:
+            yield curs
 
 
 def wait_status(wanted='available', instance='test0', first_delay=30):
@@ -50,16 +65,22 @@ def test_sql_to_endpoint(rds):
     cmd = aws(
         "rds", "describe-db-instances", "--db-instance-identifier", "test0")
     out = json.loads(cmd.stdout)
-    instance, = out['DBInstances']
-    pgconn = psycopg2.connect(
-        host=instance['Endpoint']['Address'],
-        port=instance['Endpoint']['Port'],
-        user=instance['MasterUsername'],
-        password='C0nfidentiel',
+    with pgconnect(out['DBInstances'][0]) as curs:
+        curs.execute("SELECT NOW()")
+
+
+def test_reboot_db_instance(rds, worker):
+    cmd = aws(
+        "rds", "reboot-db-instance",
+        "--db-instance-identifier", "test0",
     )
-    with pgconn:
-        with pgconn.cursor() as curs:
-            curs.execute("SELECT NOW()")
+    out = json.loads(cmd.stdout)
+    assert 'rebooting' == out['DBInstance']['DBInstanceStatus']
+
+    wait_status('available')
+
+    with pgconnect(out['DBInstance']) as curs:
+        curs.execute("SELECT NOW()")
 
 
 def test_delete_db_instance(iaas, rds, worker):
