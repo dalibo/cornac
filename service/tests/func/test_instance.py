@@ -9,6 +9,19 @@ from sh import aws
 logger = logging.getLogger(__name__)
 
 
+def wait_status(wanted='available', instance='test0', first_delay=30):
+    for s in range(first_delay, 1, -1):
+        sleep(s)
+        cmd = aws(
+            "rds", "describe-db-instances",
+            "--db-instance-identifier", instance)
+        out = json.loads(cmd.stdout)
+        if wanted == out['DBInstances'][0]['DBInstanceStatus']:
+            break
+    else:
+        raise Exception("Timeout checking for status update.")
+
+
 def test_describe_db_instances(rds):
     cmd = aws("rds", "describe-db-instances")
     out = json.loads(cmd.stdout)
@@ -30,16 +43,7 @@ def test_create_db_instance(rds, worker):
     out = json.loads(cmd.stdout)
     assert 'creating' == out['DBInstance']['DBInstanceStatus']
 
-    for s in range(30, 1, -1):  # This waits up to 464s
-        sleep(s)
-        cmd = aws(
-            "rds", "describe-db-instances",
-            "--db-instance-identifier", "test0")
-        out = json.loads(cmd.stdout)
-        if 'available' == out['DBInstances'][0]['DBInstanceStatus']:
-            break
-    else:
-        raise Exception("Timeout creating database instance.")
+    wait_status('available')
 
 
 def test_sql_to_endpoint(rds):
