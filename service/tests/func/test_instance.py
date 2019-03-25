@@ -62,7 +62,7 @@ def test_sql_to_endpoint(rds):
             curs.execute("SELECT NOW()")
 
 
-def test_delete_db_instance(rds, worker):
+def test_delete_db_instance(iaas, rds, worker):
     cmd = aws(
         "rds", "delete-db-instance",
         "--db-instance-identifier", "test0",
@@ -77,10 +77,12 @@ def test_delete_db_instance(rds, worker):
                 "rds", "describe-db-instances",
                 "--db-instance-identifier", "test0")
             out = json.loads(cmd.stdout)
-            if 'continue' == out['DBInstances'][0]['DBInstanceStatus']:
+            if 'deleting' == out['DBInstances'][0]['DBInstanceStatus']:
                 continue
         except Exception as e:
             logger.warning("Can't describe db instance anymore: %s", e)
             break
     else:
         raise Exception("Timeout deleting database instance.")
+
+    assert 1 == len(list(iaas.list_machines()))
