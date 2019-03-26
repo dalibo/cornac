@@ -34,7 +34,7 @@ def main():
 
         response = xml.make_response_xml(
             action=action_name,
-            result=action(payload),
+            result=action(**payload),
             requestid=requestid,
         )
         current_app.logger.info(*log_args)

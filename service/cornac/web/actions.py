@@ -17,7 +17,7 @@ DEFAULT_CREATE_COMMAND = dict(
 )
 
 
-def CreateDBInstance(command):
+def CreateDBInstance(**command):
     command = dict(DEFAULT_CREATE_COMMAND, **command)
     command['AllocatedStorage'] = int(command['AllocatedStorage'])
 
@@ -33,7 +33,7 @@ def CreateDBInstance(command):
     return xml.InstanceEncoder(instance).as_xml()
 
 
-def DeleteDBInstance(command):
+def DeleteDBInstance(**command):
     instance = (
         DBInstance.query
         .filter(DBInstance.identifier == command['DBInstanceIdentifier'])
@@ -53,7 +53,7 @@ INSTANCE_LIST_TMPL = Template(dedent("""\
 """), trim_blocks=True)
 
 
-def DescribeDBInstances(command):
+def DescribeDBInstances(**command):
     qry = DBInstance.query
     if 'DBInstanceIdentifier' in command:
         qry = qry.filter(
@@ -63,10 +63,10 @@ def DescribeDBInstances(command):
         instances=[xml.InstanceEncoder(i) for i in instances])
 
 
-def RebootDBInstance(command):
+def RebootDBInstance(*, DBInstanceIdentifier):
     instance = (
         DBInstance.query
-        .filter(DBInstance.identifier == command['DBInstanceIdentifier'])
+        .filter(DBInstance.identifier == DBInstanceIdentifier)
         .one())
     instance.status = 'rebooting'
     db.session.commit()
@@ -74,10 +74,10 @@ def RebootDBInstance(command):
     return xml.InstanceEncoder(instance).as_xml()
 
 
-def StartDBInstance(command):
+def StartDBInstance(*, DBInstanceIdentifier):
     instance = (
         DBInstance.query
-        .filter(DBInstance.identifier == command['DBInstanceIdentifier'])
+        .filter(DBInstance.identifier == DBInstanceIdentifier)
         .one())
     instance.status = 'starting'
     db.session.commit()
@@ -85,10 +85,10 @@ def StartDBInstance(command):
     return xml.InstanceEncoder(instance).as_xml()
 
 
-def StopDBInstance(command):
+def StopDBInstance(DBInstanceIdentifier):
     instance = (
         DBInstance.query
-        .filter(DBInstance.identifier == command['DBInstanceIdentifier'])
+        .filter(DBInstance.identifier == DBInstanceIdentifier)
         .one())
     instance.status = 'stopping'
     db.session.commit()
