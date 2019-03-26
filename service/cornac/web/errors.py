@@ -15,10 +15,14 @@ class RDSError(HTTPException):
         if rdscode:
             self.rdscode = rdscode
 
+    @classmethod
+    def __init_subclass__(cls, **kw):
+        super().__init_subclass__(**kw)
+        cls.rdscode = cls.__name__
+
 
 class InvalidAction(RDSError):
     code = 400
     description = (
         'The action or operation requested is invalid. '
         'Verify that the action is typed correctly.')
-    rdscode = 'InvalidAction'
