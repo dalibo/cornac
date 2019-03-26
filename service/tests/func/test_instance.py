@@ -8,6 +8,7 @@ from sh import aws
 
 
 logger = logging.getLogger(__name__)
+PGPASSWORD = 'C0nfidentiel'
 
 
 @contextmanager
@@ -53,7 +54,7 @@ def test_create_db_instance(rds, worker):
         "--allocated-storage", "5",
         "--no-multi-az",
         "--master-username", "postgres",
-        "--master-user-password", "C0nfidentiel",
+        "--master-user-password", PGPASSWORD,
     )
     out = json.loads(cmd.stdout)
     assert 'creating' == out['DBInstance']['DBInstanceStatus']
@@ -65,7 +66,7 @@ def test_sql_to_endpoint(rds):
     cmd = aws(
         "rds", "describe-db-instances", "--db-instance-identifier", "test0")
     out = json.loads(cmd.stdout)
-    with pgconnect(out['DBInstances'][0]) as curs:
+    with pgconnect(out['DBInstances'][0], password=PGPASSWORD) as curs:
         curs.execute("SELECT NOW()")
 
 
@@ -79,7 +80,7 @@ def test_reboot_db_instance(rds, worker):
 
     wait_status('available')
 
-    with pgconnect(out['DBInstance']) as curs:
+    with pgconnect(out['DBInstance'], password=PGPASSWORD) as curs:
         curs.execute("SELECT NOW()")
 
 
