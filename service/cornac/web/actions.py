@@ -8,6 +8,7 @@ from textwrap import dedent
 
 from jinja2 import Template
 from sqlalchemy.orm.exc import NoResultFound
+from sqlalchemy.exc import IntegrityError
 
 from . import (
     errors,
@@ -42,7 +43,10 @@ def CreateDBInstance(**command):
     instance.status = 'creating'
     instance.data = command
     db.session.add(instance)
-    db.session.commit()
+    try:
+        db.session.commit()
+    except IntegrityError as e:
+        raise errors.DBInstanceAlreadyExists()
 
     worker.create_db.send(instance.id)
 

@@ -21,6 +21,11 @@ class RDSError(HTTPException):
         cls.rdscode = cls.__name__
 
 
+class DBInstanceAlreadyExists(RDSError):
+    code = 400
+    description = 'DB Instance already exists'
+
+
 class DBInstanceNotFound(RDSError):
     code = 404
 
