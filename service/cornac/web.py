@@ -32,12 +32,11 @@ def main():
     log_args = ("RDS %s %s", action_name, identifier)
 
     try:
-        try:
-            action = getattr(RDS, action_name)
-        except AttributeError:
+        action = getattr(RDS, action_name, None)
+        if action is None:
             logger.warning("Unknown RDS action: %s.", action_name)
             logger.debug("payload=%r", payload)
-            abort(400)
+            raise InvalidAction()
 
         response = make_response_xml(
             action=action_name,
@@ -47,7 +46,8 @@ def main():
         current_app.logger.info(*log_args)
     except HTTPException as e:
         current_app.logger.error(*log_args)
-        e = RDSError(code=e.code, description=str(e))
+        if not isinstance(e, RDSError):
+            e = RDSError(code=e.code, description=str(e))
         response = make_error_xml(error=e, requestid=requestid)
     except Exception:
         current_app.logger.exception(*log_args)
@@ -238,3 +238,11 @@ class InstanceEncoder:
             endpoint_address=endpoint_address,
             **self.instance.__dict__,
         )
+
+
+class InvalidAction(RDSError):
+    code = 400
+    description = (
+        'The action or operation requested is invalid. '
+        'Verify that the action is typed correctly.')
+    rdscode = 'InvalidAction'
