@@ -23,6 +23,7 @@ from .core.model import DBInstance, db, connect
 from .core.schema import Migrator
 from .iaas import IaaS
 from .operator import BasicOperator
+from .ssh import wait_machine
 
 
 logger = logging.getLogger(__name__)
@@ -111,6 +112,21 @@ def migratedb(dry):
         logger.info("Check terminated." if dry else "Database updated.")
     else:
         logger.info("Database already uptodate.")
+
+
+@root.command(help="Ensure Cornac service VM are up.")
+def recover():
+    with IaaS.connect(current_app.config['IAAS'], current_app.config) as iaas:
+        iaas.start_machine('cornac')
+    connstring = current_app.config['SQLALCHEMY_DATABASE_URI']
+    pgurl = urlparse(connstring)
+    port = pgurl.port or 5432
+    logger.info("Waiting for %s:%s opening.", pgurl.hostname, port)
+    wait_machine(pgurl.hostname, port=port)
+    logger.info("Testing PostgreSQL connection.")
+    with connect(connstring):
+        pass
+    logger.info("Cornac is ready to run.")
 
 
 def entrypoint():
