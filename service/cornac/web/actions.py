@@ -3,18 +3,34 @@
 # Each method corresponds to a well-known RDS action, returning result as
 # XML snippet.
 
+import logging
 from textwrap import dedent
 
 from jinja2 import Template
+from sqlalchemy.orm.exc import NoResultFound
 
-from . import xml
+from . import (
+    errors,
+    xml,
+)
 from .. import worker
 from ..core.model import DBInstance, db
 
 
+logger = logging.getLogger(__name__)
 DEFAULT_CREATE_COMMAND = dict(
     EngineVersion='11',
 )
+
+
+def get_instance(identifier):
+    try:
+        return (
+            DBInstance.query
+            .filter(DBInstance.identifier == identifier)
+            .one())
+    except NoResultFound:
+        raise errors.DBInstanceNotFound(identifier)
 
 
 def CreateDBInstance(**command):
@@ -33,11 +49,8 @@ def CreateDBInstance(**command):
     return xml.InstanceEncoder(instance).as_xml()
 
 
-def DeleteDBInstance(**command):
-    instance = (
-        DBInstance.query
-        .filter(DBInstance.identifier == command['DBInstanceIdentifier'])
-        .one())
+def DeleteDBInstance(*, DBInstanceIdentifier, **command):
+    instance = get_instance(DBInstanceIdentifier)
     instance.status = 'deleting'
     worker.delete_db_instance.send(instance.id)
     db.session.commit()
@@ -75,10 +88,7 @@ def RebootDBInstance(*, DBInstanceIdentifier):
 
 
 def StartDBInstance(*, DBInstanceIdentifier):
-    instance = (
-        DBInstance.query
-        .filter(DBInstance.identifier == DBInstanceIdentifier)
-        .one())
+    instance = get_instance(DBInstanceIdentifier)
     instance.status = 'starting'
     db.session.commit()
     worker.start_db_instance.send(instance.id)
@@ -86,10 +96,7 @@ def StartDBInstance(*, DBInstanceIdentifier):
 
 
 def StopDBInstance(DBInstanceIdentifier):
-    instance = (
-        DBInstance.query
-        .filter(DBInstance.identifier == DBInstanceIdentifier)
-        .one())
+    instance = get_instance(DBInstanceIdentifier)
     instance.status = 'stopping'
     db.session.commit()
     worker.stop_db_instance.send(instance.id)

@@ -21,6 +21,13 @@ class RDSError(HTTPException):
         cls.rdscode = cls.__name__
 
 
+class DBInstanceNotFound(RDSError):
+    code = 404
+
+    def __init__(self, identifier):
+        super().__init__(description=f"DBInstance {identifier} not found.")
+
+
 class InvalidAction(RDSError):
     code = 400
     description = (
