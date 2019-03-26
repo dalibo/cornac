@@ -4,6 +4,7 @@ from uuid import uuid4
 
 from flask import Blueprint, abort, current_app, make_response, request
 from jinja2 import Template
+from werkzeug.exceptions import HTTPException
 
 from . import worker
 from .core.model import DBInstance, db
@@ -26,27 +27,34 @@ def main():
     # Bridge RDS service and Flask routing. RDS actions are not RESTful.
     payload = dict(request.form)
     action_name = payload.pop('Action')
-
-    try:
-        action = getattr(RDS, action_name)
-    except AttributeError:
-        logger.warning("Unknown RDS action: %s.", action_name)
-        logger.debug("payload=%r", payload)
-        abort(400)
-
     identifier = payload.get('DBInstanceIdentifier', '-')
+    requestid = uuid4()
     log_args = ("RDS %s %s", action_name, identifier)
+
     try:
+        try:
+            action = getattr(RDS, action_name)
+        except AttributeError:
+            logger.warning("Unknown RDS action: %s.", action_name)
+            logger.debug("payload=%r", payload)
+            abort(400)
+
         response = make_response_xml(
             action=action_name,
             result=action(payload),
-            requestid=uuid4(),
+            requestid=requestid,
         )
         current_app.logger.info(*log_args)
-        return response
+    except HTTPException as e:
+        current_app.logger.error(*log_args)
+        e = RDSError(code=e.code, description=str(e))
+        response = make_error_xml(error=e, requestid=requestid)
     except Exception:
         current_app.logger.exception(*log_args)
-        raise
+        # Don't expose error.
+        response = make_error_xml(error=RDSError(), requestid=requestid)
+
+    return response
 
 
 class RDS(object):
@@ -136,6 +144,47 @@ class RDS(object):
         db.session.commit()
         worker.stop_db_instance.send(instance.id)
         return InstanceEncoder(instance).as_xml()
+
+
+class RDSError(HTTPException):
+    code = 500
+    description = (
+        'The request processing has failed because of an unknown error, '
+        'exception or failure.')
+    rdscode = 'InternalFailure'
+
+    def __init__(self, code=None, rdscode=None, **kw):
+        super().__init__(**kw)
+        if code:
+            self.code = code
+        if rdscode:
+            self.rdscode = rdscode
+
+
+ERROR_TMPL = Template("""\
+<ErrorResponse>
+   <Error>
+      <Type>{{ type }}</Type>
+      <Code>{{ rdscode }}</Code>
+      <Message>{{ message }}</Message>
+   </Error>
+   <RequestId>{{ requestid }}</RequestId>
+</ErrorResponse>
+""")
+
+
+def make_error_xml(error, requestid):
+    xml = ERROR_TMPL.render(
+        code=error.code,
+        message=error.description,
+        rdscode=error.rdscode,
+        requestid=requestid,
+        type='Sender' if error.code < 500 else 'Receiver',
+    )
+    response = make_response(xml)
+    response.status_code = error.code
+    response.content_type = 'text/xml; charset=utf-8'
+    return response
 
 
 RESPONSE_TMPL = Template("""\
