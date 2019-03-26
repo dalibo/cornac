@@ -47,8 +47,20 @@ def iaas(app):
 
 @pytest.fixture(scope='session')
 def rds():
+    # Ensure no other cornac is running.
+    try:
+        requests.get('http://localhost:5000/rds')
+        raise Exception("cornac web already running.")
+    except requests.exceptions.RequestException:
+        pass
+
     proc = Popen(["cornac", "--verbose", "run"])
     http_wait('http://localhost:5000/rds')
+
+    # Ensure cornac is effectively running.
+    if proc.poll():
+        raise Exception("Failed to start cornac web.")
+
     try:
         yield proc
     finally:
