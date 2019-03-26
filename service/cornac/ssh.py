@@ -9,6 +9,10 @@ import tenacity
 logger = logging.getLogger(__name__)
 
 
+class CommandError(Exception):
+    pass
+
+
 def logged_cmd(cmd, *a, **kw):
     logger.debug("Running %s", ' '.join([shlex.quote(i) for i in cmd]))
     child = subprocess.Popen(
@@ -36,6 +40,8 @@ remote_retry = tenacity.retry(
     wait=tenacity.wait_chain(*[
         tenacity.wait_fixed(i) for i in range(12, 1, -1)
     ]),
+    retry=(tenacity.retry_if_exception_type(CommandError) |
+           tenacity.retry_if_exception_type(OSError)),
     stop=tenacity.stop_after_delay(300),
     reraise=True)
 
@@ -67,7 +73,7 @@ class RemoteShell(object):
             )
         except subprocess.CalledProcessError as e:
             # SSH shows stderr in stdout.
-            raise Exception(e.stdout)
+            raise CommandError(e.stdout)
 
     def copy(self, src, dst):
         try:
