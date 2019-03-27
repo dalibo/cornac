@@ -2,6 +2,13 @@
 # IaaS object manages machine, disk and networking.
 #
 
+import logging
+
+from ..errors import KnownError
+
+
+logger = logging.getLogger(__name__)
+
 
 class IaaS(object):
     registry = {
@@ -14,7 +21,10 @@ class IaaS(object):
 
     @classmethod
     def load_iaas(cls, name):
-        modname, clsname = cls.registry[name].split(':')
+        try:
+            modname, clsname = cls.registry[name].split(':')
+        except KeyError:
+            raise KnownError(f"Unknown IaaS type {name}.")
         mod = __import__(modname, fromlist=[clsname], level=0)
         return getattr(mod, clsname)
 
@@ -23,7 +33,11 @@ class IaaS(object):
         provider, _, url = url.partition('+')
         iaas_cls = cls.load_iaas(provider)
         # Let's provider class analyze URL.
-        return iaas_cls.connect(url, config)
+        try:
+            return iaas_cls.connect(url, config)
+        except Exception as e:
+            msg = f"Failed to connect to {provider} at '{url}': {e}"
+            raise KnownError(msg)
 
     # By inheriting this class, IaaS provider implementation gains context
     # management to properly close resources.

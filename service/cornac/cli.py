@@ -6,6 +6,7 @@
 # development and production should use WSGI entrypoint.
 #
 
+import errno
 import logging.config
 import os
 import pdb
@@ -16,11 +17,13 @@ from urllib.parse import urlparse
 import click
 from flask import current_app
 from flask.cli import FlaskGroup
+from sqlalchemy.exc import IntegrityError
 
 
 from . import create_app
 from .core.model import DBInstance, db, connect
 from .core.schema import Migrator
+from .errors import KnownError
 from .iaas import IaaS
 from .operator import BasicOperator
 from .ssh import wait_machine
@@ -29,14 +32,20 @@ from .ssh import wait_machine
 logger = logging.getLogger(__name__)
 
 
-class KnownError(Exception):
-    def __init__(self, message, exit_code=os.EX_SOFTWARE):
-        super(KnownError, self).__init__(message)
-        self.exit_code = exit_code
+class CornacGroup(FlaskGroup):
+    # Wrapper around FlaskGroup to lint error handling.
+
+    def main(self, *a, **kw):
+        try:
+            return super().main(*a, **kw)
+        except OSError as e:
+            if errno.EADDRINUSE == e.errno:
+                raise KnownError("Address already in use.")
+            raise
 
 
 # Root group of CLI.
-@click.group(cls=FlaskGroup, create_app=create_app)
+@click.group(cls=CornacGroup, create_app=create_app)
 @click.option('--verbose/-v', default=False)
 @click.pass_context
 def root(ctx, verbose):
@@ -82,8 +91,12 @@ def bootstrap(ctx, pgversion, size):
     # Drop master password before saving command in database.
     instance.create_params = dict(command, MasterUserPassword=None)
     db.session.add(instance)
-    db.session.commit()
-    logger.debug("Done")
+    try:
+        db.session.commit()
+    except IntegrityError:
+        logger.debug("Already registered.")
+    else:
+        logger.debug("Done")
 
 
 @root.command(help="Migrate schema and database of cornac database.")
