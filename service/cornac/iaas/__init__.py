@@ -2,6 +2,13 @@
 # IaaS object manages machine, disk and networking.
 #
 
+import logging
+
+from ..utils import KnownError
+
+
+logger = logging.getLogger(__name__)
+
 
 class IaaS(object):
     registry = {
@@ -14,7 +21,10 @@ class IaaS(object):
 
     @classmethod
     def load_iaas(cls, name):
-        modname, clsname = cls.registry[name].split(':')
+        try:
+            modname, clsname = cls.registry[name].split(':')
+        except KeyError:
+            raise KnownError(f"Unknown IaaS type {name}.")
         mod = __import__(modname, fromlist=[clsname], level=0)
         return getattr(mod, clsname)
 
