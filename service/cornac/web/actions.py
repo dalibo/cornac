@@ -45,7 +45,7 @@ def CreateDBInstance(**command):
     db.session.add(instance)
     try:
         db.session.commit()
-    except IntegrityError as e:
+    except IntegrityError:
         raise errors.DBInstanceAlreadyExists()
 
     worker.create_db.send(instance.id)

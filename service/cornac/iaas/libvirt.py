@@ -81,14 +81,15 @@ class LibVirtIaaS(IaaS):
         # For now, just clone definition of first disk found in pool.
         vol0 = pool.listAllVolumes()[0]
         xvol = ET.fromstring(vol0.XMLDesc())
-        xvol.find('./name').text = name
-        xkey = xvol.find('./key')
-        xkey.text = os.path.dirname(xkey.text) + "/" + name + ".qcow2"
-        xvol.find('./target/path').text = xkey.text
+        xvol.find('./name').text = name + ".qcow2"
         xvol.find('./capacity').text = "%d" % (size_gb * _1G)
         # Prallocate 256K, for partition, PV metadata and mkfs.
         xvol.find('./allocation').text = "%d" % (256 * 1024,)
+
+        xvol.remove(xvol.find('./key'))
         xvol.remove(xvol.find('./physical'))
+        xtarget = xvol.find('./target')
+        xtarget.remove(xtarget.find('./path'))
 
         logger.debug("Creating disk %s.", name)
         return pool.createXML(ET.tostring(xvol, encoding='unicode'))
@@ -105,7 +106,7 @@ class LibVirtIaaS(IaaS):
                 "--name", name,
                 "--auto-clone",
             ]
-            logger.debug("Allocating machine.")
+            logger.debug("Allocating machine %s.", name)
             logged_cmd(clone_cmd)
             domain = self.conn.lookupByName(name)
         else:
@@ -124,7 +125,7 @@ class LibVirtIaaS(IaaS):
                     "--ssh-inject",
                     f"root:string:{self.config['ROOT_PUBLIC_KEY']}",
                 ])
-            logger.debug("Preparing machine.")
+            logger.debug("Preparing machine %s.", name)
             logged_cmd(prepare_cmd)
 
         disk = self.create_disk(storage_pool, f'{name}-data', data_size_gb)

@@ -177,6 +177,7 @@ def setup_logging(*, appname='cornac', verbose):
             'default': {
                 '()': 'logging.Formatter',
                 'format': format,
+                'datefmt': '%H:%M:%S',
             },
         },
         'handlers': {
