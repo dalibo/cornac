@@ -24,6 +24,7 @@ from pyVmomi import (
 )
 
 from . import IaaS
+from ..errors import KnownError
 from ..ssh import RemoteShell
 
 
@@ -92,7 +93,11 @@ class vCenter(IaaS):
 
         logger.debug("Cloning %s as %s.", origin.name, name)
         task = origin.Clone(folder=origin.parent, name=name, spec=clonespec)
-        machine = self.wait_task(task)
+        try:
+            machine = self.wait_task(task)
+        except vim.fault.DuplicateName:
+            raise KnownError(f"VM {name} already exists.")
+
         self.sysprep(machine)
         return machine
 
