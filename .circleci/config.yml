@@ -28,4 +28,4 @@ jobs:
         name: Python tests
         command: |
           cd service/;
-          poetry run flake8 service/;
+          poetry run flake8 cornac/ tests/;
