@@ -6,6 +6,7 @@
 # development and production should use WSGI entrypoint.
 #
 
+import errno
 import logging.config
 import os
 import pdb
@@ -35,8 +36,20 @@ class KnownError(Exception):
         self.exit_code = exit_code
 
 
+class CornacGroup(FlaskGroup):
+    # Wrapper around FlaskGroup to lint error handling.
+
+    def main(self, *a, **kw):
+        try:
+            return super().main(*a, **kw)
+        except OSError as e:
+            if errno.EADDRINUSE == e.errno:
+                raise KnownError("Address already in use.")
+            raise
+
+
 # Root group of CLI.
-@click.group(cls=FlaskGroup, create_app=create_app)
+@click.group(cls=CornacGroup, create_app=create_app)
 @click.option('--verbose/-v', default=False)
 @click.pass_context
 def root(ctx, verbose):
