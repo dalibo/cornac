@@ -17,6 +17,7 @@ from urllib.parse import urlparse
 import click
 from flask import current_app
 from flask.cli import FlaskGroup
+from sqlalchemy.exc import IntegrityError
 
 
 from . import create_app
@@ -90,8 +91,12 @@ def bootstrap(ctx, pgversion, size):
     # Drop master password before saving command in database.
     instance.create_params = dict(command, MasterUserPassword=None)
     db.session.add(instance)
-    db.session.commit()
-    logger.debug("Done")
+    try:
+        db.session.commit()
+    except IntegrityError:
+        logger.debug("Already registered.")
+    else:
+        logger.debug("Done")
 
 
 @root.command(help="Migrate schema and database of cornac database.")
