@@ -30,6 +30,16 @@ from ..ssh import RemoteShell
 logger = logging.getLogger(__name__)
 
 
+@contextmanager
+def lint_error():
+    # pyVmomi errors string serialization is ugly. This context manager reraise
+    # errors with clean message.
+    try:
+        yield None
+    except vmodl.MethodFault as e:
+        raise Exception(e.msg) from e
+
+
 class vCenter(IaaS):
     @classmethod
     def connect(cls, url, config):
@@ -37,12 +47,13 @@ class vCenter(IaaS):
         args = parse_qs(url.query)
         no_verify = args.get('no_verify', ['0']) == ['1']
         connector = SmartConnectNoSSL if no_verify else SmartConnect
-        si = connector(
-            host=url.hostname,
-            user=url.username,
-            pwd=url.password,
-            port=url.port or 443,
-        )
+        with lint_error():
+            si = connector(
+                host=url.hostname,
+                user=url.username,
+                pwd=url.password,
+                port=url.port or 443,
+            )
         return cls(si, config)
 
     def __init__(self, si, config):

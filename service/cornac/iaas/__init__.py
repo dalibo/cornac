@@ -33,7 +33,11 @@ class IaaS(object):
         provider, _, url = url.partition('+')
         iaas_cls = cls.load_iaas(provider)
         # Let's provider class analyze URL.
-        return iaas_cls.connect(url, config)
+        try:
+            return iaas_cls.connect(url, config)
+        except Exception as e:
+            msg = f"Failed to connect to {provider} at '{url}': {e}"
+            raise KnownError(msg)
 
     # By inheriting this class, IaaS provider implementation gains context
     # management to properly close resources.
