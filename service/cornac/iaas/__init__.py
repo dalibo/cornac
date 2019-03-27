@@ -4,7 +4,7 @@
 
 import logging
 
-from ..utils import KnownError
+from ..errors import KnownError
 
 
 logger = logging.getLogger(__name__)

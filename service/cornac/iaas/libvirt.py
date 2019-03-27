@@ -14,7 +14,7 @@ from time import sleep
 import libvirt
 
 from . import IaaS
-from ..utils import Timeout
+from ..errors import Timeout
 from ..ssh import logged_cmd
 
 

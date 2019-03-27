@@ -22,10 +22,10 @@ from flask.cli import FlaskGroup
 from . import create_app
 from .core.model import DBInstance, db, connect
 from .core.schema import Migrator
+from .errors import KnownError
 from .iaas import IaaS
 from .operator import BasicOperator
 from .ssh import wait_machine
-from .utils import KnownError
 
 
 logger = logging.getLogger(__name__)
