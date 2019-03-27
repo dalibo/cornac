@@ -72,10 +72,10 @@ def bootstrap(ctx, pgversion, size):
         operator = BasicOperator(iaas, current_app.config)
         operator.create_db_instance(command)
 
-    logger.info("Initializing schema.")
+    logger.info("Creating schema.")
     ctx.invoke(migratedb, dry=False)
 
-    logger.info("Registering instance to inventory.")
+    logger.info("Registering own instance to inventory.")
     instance = DBInstance()
     instance.identifier = command['DBInstanceIdentifier']
     instance.status = 'available'

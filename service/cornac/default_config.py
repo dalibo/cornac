@@ -45,6 +45,6 @@ VCENTER_RESOURCE_POOL = None
 # Here cornac configures Flask and extensions. You should not overload this
 # settings.
 
-DRAMATIQ_BROKER = 'cornac.worker:URLPostgresBroker'
+DRAMATIQ_BROKER = 'dramatiq_pg:PostgresBroker'
 DRAMATIQ_BROKER_URL = SQLALCHEMY_DATABASE_URI
 SQLALCHEMY_TRACK_MODIFICATIONS = False
