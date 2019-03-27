@@ -106,7 +106,7 @@ class LibVirtIaaS(IaaS):
                 "--name", name,
                 "--auto-clone",
             ]
-            logger.debug("Allocating machine.")
+            logger.debug("Allocating machine %s.", name)
             logged_cmd(clone_cmd)
             domain = self.conn.lookupByName(name)
         else:
@@ -125,7 +125,7 @@ class LibVirtIaaS(IaaS):
                     "--ssh-inject",
                     f"root:string:{self.config['ROOT_PUBLIC_KEY']}",
                 ])
-            logger.debug("Preparing machine.")
+            logger.debug("Preparing machine %s.", name)
             logged_cmd(prepare_cmd)
 
         disk = self.create_disk(storage_pool, f'{name}-data', data_size_gb)
