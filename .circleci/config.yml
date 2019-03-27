@@ -4,10 +4,10 @@ workflows:
   version: 2
   pipeline:
     jobs:
-    - 0-lint-py36
+    - 0-unit-py36
 
 jobs:
-  0-lint-py36:
+  0-unit-py36:
     docker: [{image: "circleci/python:3.6-stretch"}]
     environment:
       XDG_CACHE_HOME: /home/circleci/workspace/.cache/
@@ -29,3 +29,4 @@ jobs:
         command: |
           cd service/;
           poetry run flake8 cornac/ tests/;
+          poetry run pytest -x tests/unit/;

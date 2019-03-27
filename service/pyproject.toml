@@ -22,6 +22,7 @@ sh = "^1.12"
 pytest = "^4.3"
 flask-shell-ptpython = "^1.0"
 dramatiq = {version = "^1.5",extras = ["watch"]}
+pytest-mock = "^1.10"
 
 [tool.poetry.extras]
 libvirt = ["libvirt-python"]
