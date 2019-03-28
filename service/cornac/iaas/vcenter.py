@@ -105,7 +105,7 @@ class vCenter(IaaS):
         machine = self._ensure_machine(machine)
         if 'poweredOn' == machine.runtime.powerState:
             logger.debug("Powering off %s.", machine)
-            with self.wait_change(machine, 'runtime.powerState'):
+            with self.wait_update(machine, 'runtime.powerState'):
                 self.wait_task(machine.PowerOff())
         logger.debug("Destroying %s.", machine)
         return self.wait_task(machine.Destroy_Task())
@@ -145,7 +145,7 @@ class vCenter(IaaS):
         if 'toolsOk' == machine.guest.toolsStatus:
             return
 
-        with self.wait_change(machine, 'guest.toolsStatus'):
+        with self.wait_update(machine, 'guest.toolsStatus'):
             logger.debug("Wait for tools to come up on %s.", machine)
 
         if 'toolsOk' != machine.guest.toolsStatus:
@@ -182,7 +182,7 @@ class vCenter(IaaS):
         ssh(["/usr/local/bin/vhelper.sh", "sysprep"])
 
     @contextmanager
-    def wait_change(self, obj, proppath):
+    def wait_update(self, obj, proppath):
         propSpec = vmodl.query.PropertyCollector.PropertySpec(
             type=type(obj), all=False, pathSet=[proppath])
         filterSpec = vmodl.query.PropertyCollector.FilterSpec(
@@ -197,6 +197,7 @@ class vCenter(IaaS):
         try:
             initset = pc.WaitForUpdatesEx(version='', options=waitopts)
             yield
+            logger.debug("Waiting for update on %s.%s.", obj, proppath)
             return pc.WaitForUpdatesEx(initset.version, options=waitopts)
         finally:
             pcFilter.Destroy()
