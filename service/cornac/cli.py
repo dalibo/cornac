@@ -14,6 +14,7 @@ import sys
 from textwrap import dedent
 from urllib.parse import urlparse
 
+import bjoern
 import click
 from flask import current_app
 from flask.cli import FlaskGroup
@@ -97,6 +98,17 @@ def bootstrap(ctx, pgversion, size):
         logger.debug("Already registered.")
     else:
         logger.debug("Done")
+
+
+@root.command(help="Serve on HTTP for production.")
+@click.argument('listen', default='')
+def serve(listen):
+    host, _, port = listen.partition(':')
+    host = host or 'localhost'
+    port = int(port or 5000)
+    app = current_app._get_current_object()
+    logger.info("Serving on http://%s:%s/.", host, port)
+    bjoern.run(app, host, port)
 
 
 @root.command(help="Migrate schema and database of cornac database.")

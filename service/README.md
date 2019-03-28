@@ -16,6 +16,8 @@ the use of aws CLI to manage your Postgres instances.
 
 Cornac webservice has the following prerequisites:
 
+- `python3.6-dev` and `libev-dev` on Debian or `python36-devel` and
+  `libev-devel` from EPEL.
 - SSH agent up and running with a private key.
 - VM must be accessible through SSH. The following documentation use `.virt` as
   resolvable domain for virtual machines.

@@ -85,7 +85,7 @@ def rds(cornac_env):
     except requests.exceptions.RequestException:
         pass
 
-    proc = Popen(["cornac", "--verbose", "run"], env=cornac_env)
+    proc = Popen(["cornac", "--verbose", "serve"], env=cornac_env)
     http_wait('http://localhost:5000/rds')
 
     # Ensure cornac is effectively running.
