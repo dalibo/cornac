@@ -155,13 +155,21 @@ class vCenter(IaaS):
             msg = f"{machine} tools at state {machine.guest.toolsStatus}."
             raise KnownError(msg)
 
-    def start_machine(self, machine):
+    def start_machine(self, machine, wait_ssh=False, wait_tools=False):
         machine = self._ensure_machine(machine)
         if 'poweredOn' == machine.runtime.powerState:
-            logger.debug("Already started.")
+            logger.debug("%s is already powered.", machine)
         else:
-            logger.debug("Powering %s on.", machine)
-            return self.wait_task(machine.PowerOn())
+            with self.wait_update(machine, 'runtime.powerState'):
+                logger.debug("Powering %s on.", machine)
+                self.wait_task(machine.PowerOn())
+
+        if wait_ssh:
+            ssh = RemoteShell('root', self.endpoint(machine))
+            ssh.wait()
+
+        if wait_tools:
+            self._ensure_tools(machine)
 
     def stop_machine(self, machine):
         machine = self._ensure_machine(machine)
