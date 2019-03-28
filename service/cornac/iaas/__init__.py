@@ -39,6 +39,10 @@ class IaaS(object):
             msg = f"Failed to connect to {provider} at '{url}': {e}"
             raise KnownError(msg)
 
+    @property
+    def prefix(self):
+        return self.config['MACHINE_PREFIX']
+
     # By inheriting this class, IaaS provider implementation gains context
     # management to properly close resources.
     def __enter__(self):
@@ -49,3 +53,6 @@ class IaaS(object):
 
     def close(self):
         pass
+
+    def machine_name(self, name):
+        return self.prefix + name

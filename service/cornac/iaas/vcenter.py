@@ -71,7 +71,7 @@ class vCenter(IaaS):
 
     def create_machine(
             self, name, storage_pool, data_size_gb=None, **kw):
-        name = f"cornac-{name}"
+        name = f"{self.prefix}{name}"
         logger.debug("Creating %s specification.", name)
         datastore = self.find(storage_pool)
         origin = self.find(self.config['ORIGINAL_MACHINE'])
@@ -134,13 +134,14 @@ class vCenter(IaaS):
                 continue
 
             for machine in child.vmFolder.childEntity:
-                if machine.name.startswith('cornac-'):
+                if machine.name.startswith(self.prefix):
                     yield machine
 
     def _ensure_machine(self, machine_or_name):
         if isinstance(machine_or_name, str):
             vmfolder = Path(self.config['ORIGINAL_MACHINE']).parent
-            machine_or_name = self.find(f"{vmfolder}/cornac-{machine_or_name}")
+            objpath = f"{vmfolder}/{self.prefix}{machine_or_name}"
+            machine_or_name = self.find(objpath)
         return machine_or_name
 
     def _ensure_tools(self, machine):

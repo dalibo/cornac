@@ -11,6 +11,11 @@ DNS_DOMAIN = ''
 # e.g. libvirt, vcenter+https://me:password@vcenter.acmi.lan/?no_verify=1
 IAAS = None
 
+# Prefix of VM in IaaS.
+#
+# This allow to isolate several instance of cornac in the same IaaS.
+MACHINE_PREFIX = 'cornac-'
+
 # Provider specific guest network.
 #
 # For vSphere, use absolute path e.g. 'datacenter1/network/Guest Network'

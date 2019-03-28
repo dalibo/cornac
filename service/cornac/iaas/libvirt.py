@@ -95,7 +95,7 @@ class LibVirtIaaS(IaaS):
         return pool.createXML(ET.tostring(xvol, encoding='unicode'))
 
     def create_machine(self, name, storage_pool, data_size_gb, **kw):
-        name = f"cornac-{name}"
+        name = f"{self.prefix}{name}"
         # The PoC reuses ressources until we have persistence of objects.
         try:
             domain = self.conn.lookupByName(name)
@@ -155,12 +155,12 @@ class LibVirtIaaS(IaaS):
 
     def list_machines(self):
         for domain in self.conn.listAllDomains():
-            if domain.name().startswith('cornac-'):
+            if domain.name().startswith(self.prefix):
                 yield domain
 
     def _ensure_domain(self, domain_or_name):
         if isinstance(domain_or_name, str):
-            name = f"cornac-{domain_or_name}"
+            name = f"{self.prefix}{domain_or_name}"
             domain_or_name = self.conn.lookupByName(name)
         return domain_or_name
 
