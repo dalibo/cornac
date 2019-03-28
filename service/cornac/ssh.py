@@ -72,8 +72,13 @@ class RemoteShell(object):
         except subprocess.CalledProcessError as e:
             # SSH shows commands stderr in stdout and SSH client logs in
             # stderr, let's make it clear.
+            message = e.stdout or e.stderr
+            if message:
+                message = message.splitlines()[-1]
+            else:
+                message = "Unknown error."
             raise RemoteCommandError(
-                message=e.stdout,
+                message=message,
                 exit_code=e.returncode,
                 ssh_logs=e.stderr)
 
