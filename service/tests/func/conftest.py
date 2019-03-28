@@ -12,8 +12,8 @@ from cornac.iaas import IaaS
 
 
 @pytest.fixture(scope='session')
-def app():
-    app = create_app()
+def app(cornac_env):
+    app = create_app(environ=cornac_env)
     with app.app_context():
         yield app
 
@@ -25,6 +25,37 @@ def clean_vms(iaas):
         return
     for machine in iaas.list_machines():
         iaas.delete_machine(machine)
+
+
+@pytest.fixture(scope='session')
+def cornac_env():
+    preserved_vars = set((
+        'CORNAC_DNS_DOMAIN',
+        'CORNAC_IAAS',
+        'CORNAC_NETWORK',
+        'CORNAC_ORIGINAL_MACHINE',
+        'CORNAC_ROOT_PUBLIC_KEY',
+        'CORNAC_STORAGE_POOL',
+        'CORNAC_VCENTER_RESOURCE_POOL',
+    ))
+
+    # Generate a clean environment for cornac commands.
+    clean_environ = dict(
+        (k, v) for k, v in os.environ.items()
+        if k in preserved_vars or
+        (not k.startswith('CORNAC_') and not k.startswith('PG'))
+    )
+    # Reuse local prefix.
+    prefix = 'test' + os.environ.get('CORNAC_MACHINE_PREFIX', 'cornac-')
+    # Overwrite PG conninfo accordingly.
+    dns_domain = os.environ.get('CORNAC_DNS_DOMAIN', '')
+    db = 'cornac'
+    conninfo = f"postgresql://cornac:1EstP4ss@{prefix}{db}{dns_domain}/{db}"
+    return dict(
+        clean_environ,
+        CORNAC_MACHINE_PREFIX=prefix,
+        CORNAC_SQLALCHEMY_DATABASE_URI=conninfo,
+    )
 
 
 def http_wait(url):
@@ -46,7 +77,7 @@ def iaas(app):
 
 
 @pytest.fixture(scope='session')
-def rds():
+def rds(cornac_env):
     # Ensure no other cornac is running.
     try:
         requests.get('http://localhost:5000/rds')
@@ -54,7 +85,7 @@ def rds():
     except requests.exceptions.RequestException:
         pass
 
-    proc = Popen(["cornac", "--verbose", "run"])
+    proc = Popen(["cornac", "--verbose", "run"], env=cornac_env)
     http_wait('http://localhost:5000/rds')
 
     # Ensure cornac is effectively running.
@@ -90,11 +121,11 @@ def sh_errout():
 
 
 @pytest.fixture(scope='session')
-def worker():
+def worker(cornac_env):
     proc = Popen([
         "cornac", "--verbose", "worker",
         "--processes=1", "--threads=2",
-    ])
+    ], env=cornac_env)
     try:
         yield proc
     finally:
