@@ -13,6 +13,12 @@ class RemoteCommandError(Exception):
         self.exit_code = exit_code
         self.ssh_logs = ssh_logs
 
+    @property
+    def connection_closed_by_remote(self):
+        return (
+            self.exit_code == 255 and
+            'closed by remote host' in self.ssh_logs)
+
 
 class Timeout(Exception):
     pass

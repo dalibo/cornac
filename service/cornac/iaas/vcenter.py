@@ -24,7 +24,10 @@ from pyVmomi import (
 )
 
 from . import IaaS
-from ..errors import KnownError
+from ..errors import (
+    KnownError,
+    RemoteCommandError,
+)
 from ..ssh import RemoteShell
 
 
@@ -162,14 +165,29 @@ class vCenter(IaaS):
 
     def stop_machine(self, machine):
         machine = self._ensure_machine(machine)
-
         if 'poweredOff' == machine.runtime.powerState:
             return logger.debug("Already stopped.")
 
-        logger.debug("Shuting down %s.", machine)
-        self._ensure_tools(machine)
-        with self.wait_change(machine, 'runtime.powerState'):
-            machine.ShutdownGuest()
+        with self.wait_update(machine, 'runtime.powerState'):
+            shut = False
+            if 'toolsOk' != machine.guest.toolsStatus:
+                # If tools are slow to come up, try SSH before waiting for
+                # tools. That may be faster.
+                ssh = RemoteShell('root', self.endpoint(machine))
+                logger.debug("Shuting down %s through SSH.", machine)
+                try:
+                    ssh(["shutdown", "-h", "now"])
+                except RemoteCommandError as e:
+                    if e.connection_closed_by_remote:
+                        # Connection closed, it's fine, let's wait powerOff.
+                        shut = True
+                    else:
+                        logger.debug("SSH shutdown failed: %s.", e)
+
+            if not shut:
+                logger.debug("Shuting down %s through vTools.", machine)
+                self._ensure_tools(machine)
+                machine.ShutdownGuest()
 
     def sysprep(self, machine):
         endpoint = self.endpoint(machine)
