@@ -24,7 +24,10 @@ from pyVmomi import (
 )
 
 from . import IaaS
-from ..errors import KnownError
+from ..errors import (
+    KnownError,
+    RemoteCommandError,
+)
 from ..ssh import RemoteShell
 
 
@@ -105,7 +108,7 @@ class vCenter(IaaS):
         machine = self._ensure_machine(machine)
         if 'poweredOn' == machine.runtime.powerState:
             logger.debug("Powering off %s.", machine)
-            with self.wait_change(machine, 'runtime.powerState'):
+            with self.wait_update(machine, 'runtime.powerState'):
                 self.wait_task(machine.PowerOff())
         logger.debug("Destroying %s.", machine)
         return self.wait_task(machine.Destroy_Task())
@@ -140,23 +143,59 @@ class vCenter(IaaS):
             machine_or_name = self.find(f"{vmfolder}/cornac-{machine_or_name}")
         return machine_or_name
 
-    def start_machine(self, machine):
+    def _ensure_tools(self, machine):
+        machine = self._ensure_machine(machine)
+        if 'toolsOk' == machine.guest.toolsStatus:
+            return
+
+        with self.wait_update(machine, 'guest.toolsStatus'):
+            logger.debug("Wait for tools to come up on %s.", machine)
+
+        if 'toolsOk' != machine.guest.toolsStatus:
+            msg = f"{machine} tools at state {machine.guest.toolsStatus}."
+            raise KnownError(msg)
+
+    def start_machine(self, machine, wait_ssh=False, wait_tools=False):
         machine = self._ensure_machine(machine)
         if 'poweredOn' == machine.runtime.powerState:
-            logger.debug("Already started.")
+            logger.debug("%s is already powered.", machine)
         else:
-            logger.debug("Powering %s on.", machine)
-            return self.wait_task(machine.PowerOn())
+            with self.wait_update(machine, 'runtime.powerState'):
+                logger.debug("Powering %s on.", machine)
+                self.wait_task(machine.PowerOn())
+
+        if wait_ssh:
+            ssh = RemoteShell('root', self.endpoint(machine))
+            ssh.wait()
+
+        if wait_tools:
+            self._ensure_tools(machine)
 
     def stop_machine(self, machine):
         machine = self._ensure_machine(machine)
-
         if 'poweredOff' == machine.runtime.powerState:
             return logger.debug("Already stopped.")
 
-        logger.debug("Shuting down %s.", machine)
-        with self.wait_change(machine, 'runtime.powerState'):
-            machine.ShutdownGuest()
+        with self.wait_update(machine, 'runtime.powerState'):
+            shut = False
+            if 'toolsOk' != machine.guest.toolsStatus:
+                # If tools are slow to come up, try SSH before waiting for
+                # tools. That may be faster.
+                ssh = RemoteShell('root', self.endpoint(machine))
+                logger.debug("Shuting down %s through SSH.", machine)
+                try:
+                    ssh(["shutdown", "-h", "now"])
+                except RemoteCommandError as e:
+                    if e.connection_closed_by_remote:
+                        # Connection closed, it's fine, let's wait powerOff.
+                        shut = True
+                    else:
+                        logger.debug("SSH shutdown failed: %s.", e)
+
+            if not shut:
+                logger.debug("Shuting down %s through vTools.", machine)
+                self._ensure_tools(machine)
+                machine.ShutdownGuest()
 
     def sysprep(self, machine):
         endpoint = self.endpoint(machine)
@@ -169,7 +208,7 @@ class vCenter(IaaS):
         ssh(["/usr/local/bin/vhelper.sh", "sysprep"])
 
     @contextmanager
-    def wait_change(self, obj, proppath):
+    def wait_update(self, obj, proppath):
         propSpec = vmodl.query.PropertyCollector.PropertySpec(
             type=type(obj), all=False, pathSet=[proppath])
         filterSpec = vmodl.query.PropertyCollector.FilterSpec(
@@ -184,6 +223,7 @@ class vCenter(IaaS):
         try:
             initset = pc.WaitForUpdatesEx(version='', options=waitopts)
             yield
+            logger.debug("Waiting for update on %s.%s.", obj, proppath)
             return pc.WaitForUpdatesEx(initset.version, options=waitopts)
         finally:
             pcFilter.Destroy()

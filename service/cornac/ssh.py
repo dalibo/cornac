@@ -5,12 +5,10 @@ import subprocess
 
 import tenacity
 
+from .errors import RemoteCommandError
+
 
 logger = logging.getLogger(__name__)
-
-
-class CommandError(Exception):
-    pass
 
 
 def logged_cmd(cmd, *a, **kw):
@@ -40,7 +38,7 @@ remote_retry = tenacity.retry(
     wait=tenacity.wait_chain(*[
         tenacity.wait_fixed(i) for i in range(12, 1, -1)
     ]),
-    retry=(tenacity.retry_if_exception_type(CommandError) |
+    retry=(tenacity.retry_if_exception_type(RemoteCommandError) |
            tenacity.retry_if_exception_type(OSError)),
     stop=tenacity.stop_after_delay(300),
     reraise=True)
@@ -72,8 +70,12 @@ class RemoteShell(object):
                 [shlex.quote(i) for i in command],
             )
         except subprocess.CalledProcessError as e:
-            # SSH shows stderr in stdout.
-            raise CommandError(e.stdout)
+            # SSH shows commands stderr in stdout and SSH client logs in
+            # stderr, let's make it clear.
+            raise RemoteCommandError(
+                message=e.stdout,
+                exit_code=e.returncode,
+                ssh_logs=e.stderr)
 
     def copy(self, src, dst):
         try:
