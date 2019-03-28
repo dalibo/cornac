@@ -140,6 +140,18 @@ class vCenter(IaaS):
             machine_or_name = self.find(f"{vmfolder}/cornac-{machine_or_name}")
         return machine_or_name
 
+    def _ensure_tools(self, machine):
+        machine = self._ensure_machine(machine)
+        if 'toolsOk' == machine.guest.toolsStatus:
+            return
+
+        with self.wait_change(machine, 'guest.toolsStatus'):
+            logger.debug("Wait for tools to come up on %s.", machine)
+
+        if 'toolsOk' != machine.guest.toolsStatus:
+            msg = f"{machine} tools at state {machine.guest.toolsStatus}."
+            raise KnownError(msg)
+
     def start_machine(self, machine):
         machine = self._ensure_machine(machine)
         if 'poweredOn' == machine.runtime.powerState:
@@ -155,6 +167,7 @@ class vCenter(IaaS):
             return logger.debug("Already stopped.")
 
         logger.debug("Shuting down %s.", machine)
+        self._ensure_tools(machine)
         with self.wait_change(machine, 'runtime.powerState'):
             machine.ShutdownGuest()
 
