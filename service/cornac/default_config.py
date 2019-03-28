@@ -1,9 +1,8 @@
 #
 #       D E F A U L T   C O N F I G U R A T I O N
 #
-
-import os
-
+# You can override every settings using environment by prefixing setting with
+# CORNAC_. e.g CORNAC_IAAS will configure IAAS setting.
 
 # Domain suffix to resolve guest IP from DNS.
 DNS_DOMAIN = ''
@@ -11,6 +10,11 @@ DNS_DOMAIN = ''
 # IAAS URL, starting with provider prefix, + sign and provider specific URL.
 # e.g. libvirt, vcenter+https://me:password@vcenter.acmi.lan/?no_verify=1
 IAAS = None
+
+# Prefix of VM in IaaS.
+#
+# This allow to isolate several instance of cornac in the same IaaS.
+MACHINE_PREFIX = 'cornac-'
 
 # Provider specific guest network.
 #
@@ -26,7 +30,7 @@ NETWORK = None
 ORIGINAL_MACHINE = 'base-cornac'
 
 # DSN to Postgres database.
-SQLALCHEMY_DATABASE_URI = os.environ.get('CORNAC_DATABASE')
+SQLALCHEMY_DATABASE_URI = None
 
 # Provider-specific name of the storage pool (or datastore in vSphere).
 STORAGE_POOL = 'default'
@@ -46,5 +50,5 @@ VCENTER_RESOURCE_POOL = None
 # settings.
 
 DRAMATIQ_BROKER = 'dramatiq_pg:PostgresBroker'
-DRAMATIQ_BROKER_URL = SQLALCHEMY_DATABASE_URI
+DRAMATIQ_BROKER_URL = None
 SQLALCHEMY_TRACK_MODIFICATIONS = False
