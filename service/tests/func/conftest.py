@@ -1,3 +1,4 @@
+import json
 import os
 import sys
 from functools import partial
@@ -20,6 +21,27 @@ def app(cornac_env):
         yield app
 
 
+class AWSCLI(object):
+    def __init__(self, cli):
+        self.cli = cli
+
+    def __call__(self, *a, **kw):
+        return self.cli(*a, **kw)
+
+    def wait_status(self, wanted='available', instance='test0',
+                    first_delay=30):
+        for s in range(first_delay, 1, -1):
+            sleep(s)
+            cmd = self.cli(
+                "rds", "describe-db-instances",
+                "--db-instance-identifier", instance)
+            out = json.loads(cmd.stdout)
+            if wanted == out['DBInstances'][0]['DBInstanceStatus']:
+                break
+        else:
+            raise Exception("Timeout checking for status update.")
+
+
 @pytest.fixture(scope='session')
 def aws(cornac_env):
     awscli_config = Path(__file__).parent.parent / 'awscli-config'
@@ -29,7 +51,7 @@ def aws(cornac_env):
         AWS_PROFILE='local',
         AWS_SHARED_CREDENTIALS_FILE=str(awscli_config / 'credentials')
     )
-    yield partial(awscli, _env=aws_env)
+    yield AWSCLI(partial(awscli, _env=aws_env))
 
 
 @pytest.fixture(scope='session', autouse=True)

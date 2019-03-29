@@ -24,19 +24,6 @@ def pgconnect(instance, **kw):
             yield curs
 
 
-def wait_status(aws, wanted='available', instance='test0', first_delay=30):
-    for s in range(first_delay, 1, -1):
-        sleep(s)
-        cmd = aws(
-            "rds", "describe-db-instances",
-            "--db-instance-identifier", instance)
-        out = json.loads(cmd.stdout)
-        if wanted == out['DBInstances'][0]['DBInstanceStatus']:
-            break
-    else:
-        raise Exception("Timeout checking for status update.")
-
-
 def test_describe_db_instances(aws, rds):
     cmd = aws("rds", "describe-db-instances")
     out = json.loads(cmd.stdout)
@@ -58,7 +45,7 @@ def test_create_db_instance(aws, rds, worker):
     out = json.loads(cmd.stdout)
     assert 'creating' == out['DBInstance']['DBInstanceStatus']
 
-    wait_status(aws, 'available')
+    aws.wait_status('available')
 
 
 def test_sql_to_endpoint(aws, rds):
@@ -77,7 +64,7 @@ def test_reboot_db_instance(aws, rds, worker):
     out = json.loads(cmd.stdout)
     assert 'rebooting' == out['DBInstance']['DBInstanceStatus']
 
-    wait_status(aws, 'available')
+    aws.wait_status('available')
 
     with pgconnect(out['DBInstance'], password=PGPASSWORD) as curs:
         curs.execute("SELECT NOW()")
