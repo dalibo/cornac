@@ -60,7 +60,7 @@ create-masteruser() {  #: <NAME> <PASSWORD> [CREATEUSER_ARG ...]
 
 	# Naïve escape of parameters
 	printf -v name_e "%q" "${name}"
-	printf -v password_e "%q" "${password}"
+	password_e="${password/\'/''}"
 
 	if ! psql -tc "SELECT 'EXISTS' FROM pg_roles WHERE rolname = '${name_e}';" | grep -q EXISTS ; then
 		sudo -iu postgres createuser --no-createdb --superuser "$@" "$name"
