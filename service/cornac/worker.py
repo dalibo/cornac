@@ -60,6 +60,9 @@ def state_manager(instance, from_=None, to_='available'):
 
     try:
         yield instance
+    except TaskStop:
+        # Don't touch instance.
+        pass
     except Exception as e:
         instance.status = 'failed'
         instance.status_message = str(e)
