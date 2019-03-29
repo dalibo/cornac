@@ -1,11 +1,14 @@
+import json
 import os
 import sys
 from functools import partial
+from pathlib import Path
 from subprocess import Popen
 from time import sleep
 
 import pytest
 import requests.exceptions
+from sh import aws as awscli
 
 from cornac import create_app
 from cornac.iaas import IaaS
@@ -16,6 +19,39 @@ def app(cornac_env):
     app = create_app(environ=cornac_env)
     with app.app_context():
         yield app
+
+
+class AWSCLI(object):
+    def __init__(self, cli):
+        self.cli = cli
+
+    def __call__(self, *a, **kw):
+        return self.cli(*a, **kw)
+
+    def wait_status(self, wanted='available', instance='test0',
+                    first_delay=30):
+        for s in range(first_delay, 1, -1):
+            sleep(s)
+            cmd = self.cli(
+                "rds", "describe-db-instances",
+                "--db-instance-identifier", instance)
+            out = json.loads(cmd.stdout)
+            if wanted == out['DBInstances'][0]['DBInstanceStatus']:
+                break
+        else:
+            raise Exception("Timeout checking for status update.")
+
+
+@pytest.fixture(scope='session')
+def aws(cornac_env):
+    awscli_config = Path(__file__).parent.parent / 'awscli-config'
+    aws_env = dict(
+        cornac_env,
+        AWS_CONFIG_FILE=str(awscli_config / 'config'),
+        AWS_PROFILE='local',
+        AWS_SHARED_CREDENTIALS_FILE=str(awscli_config / 'credentials')
+    )
+    yield AWSCLI(partial(awscli, _env=aws_env))
 
 
 @pytest.fixture(scope='session', autouse=True)
@@ -43,7 +79,9 @@ def cornac_env():
     clean_environ = dict(
         (k, v) for k, v in os.environ.items()
         if k in preserved_vars or
-        (not k.startswith('CORNAC_') and not k.startswith('PG'))
+        (not k.startswith('AWS_') and
+         not k.startswith('PG') and
+         not k.startswith('CORNAC_'))
     )
     # Reuse local prefix.
     prefix = 'test' + os.environ.get('CORNAC_MACHINE_PREFIX', 'cornac-')
@@ -85,7 +123,7 @@ def rds(cornac_env):
     except requests.exceptions.RequestException:
         pass
 
-    proc = Popen(["cornac", "--verbose", "run"], env=cornac_env)
+    proc = Popen(["cornac", "--verbose", "serve"], env=cornac_env)
     http_wait('http://localhost:5000/rds')
 
     # Ensure cornac is effectively running.

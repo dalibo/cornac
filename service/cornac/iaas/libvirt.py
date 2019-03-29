@@ -134,7 +134,12 @@ class LibVirtIaaS(IaaS):
         return domain
 
     def delete_machine(self, domain):
-        domain = self._ensure_domain(domain)
+        try:
+            domain = self._ensure_domain(domain)
+        except libvirt.libvirtError as e:
+            if 'Domain not found' in str(e):
+                return logger.debug("Already deleted.")
+            raise
         state, _ = domain.state()
         if libvirt.VIR_DOMAIN_RUNNING == state:
             domain.destroy()

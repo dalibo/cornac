@@ -19,6 +19,8 @@ jobs:
     - run:
         name: Install requirements
         command: |
+          sudo apt-get -qq update -y;
+          sudo apt-get -qq install --no-install-recommends libev-dev;
           cd service/;
           poetry install;
     - save_cache:

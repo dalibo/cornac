@@ -4,7 +4,6 @@ from contextlib import contextmanager
 from time import sleep
 
 import psycopg2
-from sh import aws
 
 
 logger = logging.getLogger(__name__)
@@ -25,26 +24,13 @@ def pgconnect(instance, **kw):
             yield curs
 
 
-def wait_status(wanted='available', instance='test0', first_delay=30):
-    for s in range(first_delay, 1, -1):
-        sleep(s)
-        cmd = aws(
-            "rds", "describe-db-instances",
-            "--db-instance-identifier", instance)
-        out = json.loads(cmd.stdout)
-        if wanted == out['DBInstances'][0]['DBInstanceStatus']:
-            break
-    else:
-        raise Exception("Timeout checking for status update.")
-
-
-def test_describe_db_instances(rds):
+def test_describe_db_instances(aws, rds):
     cmd = aws("rds", "describe-db-instances")
     out = json.loads(cmd.stdout)
     assert 'cornac' == out['DBInstances'][0]['DBInstanceIdentifier']
 
 
-def test_create_db_instance(rds, worker):
+def test_create_db_instance(aws, rds, worker):
     cmd = aws(
         "rds", "create-db-instance",
         "--db-instance-identifier", "test0",
@@ -59,10 +45,10 @@ def test_create_db_instance(rds, worker):
     out = json.loads(cmd.stdout)
     assert 'creating' == out['DBInstance']['DBInstanceStatus']
 
-    wait_status('available')
+    aws.wait_status('available')
 
 
-def test_sql_to_endpoint(rds):
+def test_sql_to_endpoint(aws, rds):
     cmd = aws(
         "rds", "describe-db-instances", "--db-instance-identifier", "test0")
     out = json.loads(cmd.stdout)
@@ -70,7 +56,7 @@ def test_sql_to_endpoint(rds):
         curs.execute("SELECT NOW()")
 
 
-def test_reboot_db_instance(rds, worker):
+def test_reboot_db_instance(aws, rds, worker):
     cmd = aws(
         "rds", "reboot-db-instance",
         "--db-instance-identifier", "test0",
@@ -78,13 +64,13 @@ def test_reboot_db_instance(rds, worker):
     out = json.loads(cmd.stdout)
     assert 'rebooting' == out['DBInstance']['DBInstanceStatus']
 
-    wait_status('available')
+    aws.wait_status('available')
 
     with pgconnect(out['DBInstance'], password=PGPASSWORD) as curs:
         curs.execute("SELECT NOW()")
 
 
-def test_delete_db_instance(iaas, rds, worker):
+def test_delete_db_instance(aws, iaas, rds, worker):
     cmd = aws(
         "rds", "delete-db-instance",
         "--db-instance-identifier", "test0",
