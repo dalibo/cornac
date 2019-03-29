@@ -69,6 +69,7 @@ class LibVirtIaaS(IaaS):
         self.conn.close()
 
     def create_disk(self, pool, name, size_gb):
+        name = f"{name}.qcow2"
         pool = self.conn.storagePoolLookupByName(pool)
         try:
             disk = pool.storageVolLookupByName(name)
@@ -81,7 +82,7 @@ class LibVirtIaaS(IaaS):
         # For now, just clone definition of first disk found in pool.
         vol0 = pool.listAllVolumes()[0]
         xvol = ET.fromstring(vol0.XMLDesc())
-        xvol.find('./name').text = name + ".qcow2"
+        xvol.find('./name').text = name
         xvol.find('./capacity').text = "%d" % (size_gb * _1G)
         # Prallocate 256K, for partition, PV metadata and mkfs.
         xvol.find('./allocation').text = "%d" % (256 * 1024,)
