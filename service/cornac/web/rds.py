@@ -1,4 +1,5 @@
 import logging
+from functools import partial
 from uuid import uuid4
 
 from flask import Blueprint, current_app, request
@@ -15,6 +16,13 @@ blueprint = Blueprint('rds', __name__)
 logger = logging.getLogger(__name__)
 
 
+def log(requestid, action_name, identifier, result, code=200,
+        level=logging.INFO):
+    # Composable helper for request logging.
+    current_app.logger.log(
+        level, "RDS %s %s %s %s", action_name, identifier, code, result)
+
+
 @blueprint.route("/rds", methods=["POST"])
 def main():
     # Bridge RDS service and Flask routing. RDS actions are not RESTful.
@@ -23,7 +31,7 @@ def main():
     payload.pop('Version')
     identifier = payload.get('DBInstanceIdentifier', '-')
     requestid = uuid4()
-    log_args = ("RDS %s %s %s", requestid, action_name, identifier)
+    log_ = partial(log, requestid, action_name, identifier)
 
     try:
         action = getattr(actions, action_name, None)
@@ -37,16 +45,18 @@ def main():
             result=action(**payload),
             requestid=requestid,
         )
-        current_app.logger.info(*log_args)
+        log_(result='OK')
     except HTTPException as e:
-        current_app.logger.error(*log_args)
         if not isinstance(e, errors.RDSError):
             e = errors.RDSError(code=e.code, description=str(e))
+        # Still log user error at INFO level.
+        log_(code=e.code, result=e.rdscode)
         response = xml.make_error_xml(error=e, requestid=requestid)
     except Exception:
-        current_app.logger.exception(*log_args)
         # Don't expose error.
         e = errors.RDSError()
+        current_app.logger.exception("Unhandled RDS error:")
+        log_(code=e.code, result=e.rdscode, level=logging.ERROR)
         response = xml.make_error_xml(error=e, requestid=requestid)
 
     return response

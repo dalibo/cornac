@@ -7,7 +7,7 @@ import psycopg2
 
 
 logger = logging.getLogger(__name__)
-PGPASSWORD = 'C0nfidentiel'
+PGPASSWORD = 'C0nf\'de tie!'  # The baddest password to send thru SSH.
 
 
 @contextmanager

@@ -2,6 +2,7 @@ import logging
 import shlex
 import socket
 import subprocess
+from random import randint
 
 import tenacity
 
@@ -12,7 +13,9 @@ logger = logging.getLogger(__name__)
 
 
 def logged_cmd(cmd, *a, **kw):
-    logger.debug("Running %s", ' '.join([shlex.quote(i) for i in cmd]))
+    logger.debug("Running %s", ' '.join([shlex.quote(str(i)) for i in cmd]))
+    # Unpack passwords now that command is logged.
+    cmd = [a.password if isinstance(a, Password) else a for a in cmd]
     child = subprocess.Popen(
         cmd, *a, **kw,
         stderr=subprocess.PIPE, stdout=subprocess.PIPE,
@@ -52,6 +55,20 @@ def wait_machine(address, port=22):
     sock.close()
 
 
+class Password(object):
+    seed = randint(0, 1000)
+
+    def __init__(self, password):
+        self.password = password
+        self.hash_ = hash(f"{self.seed}-{self.password}")
+
+    def __repr__(self):
+        return '<%s %x>' % (self.__class__.__name__, self.hash_)
+
+    def __str__(self):
+        return '********'
+
+
 class RemoteShell(object):
     ssh_options = [
         # For now, just accept any key from remote hosts.
@@ -67,7 +84,12 @@ class RemoteShell(object):
         try:
             return logged_cmd(
                 self.ssh + self.ssh_options +
-                [shlex.quote(i) for i in command],
+                [
+                    Password(shlex.quote(i.password))
+                    if isinstance(i, Password) else
+                    shlex.quote(i)
+                    for i in command
+                ],
             )
         except subprocess.CalledProcessError as e:
             # SSH shows commands stderr in stdout and SSH client logs in

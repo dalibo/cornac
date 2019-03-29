@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 import sys
 from functools import partial
@@ -139,6 +140,7 @@ def rds(cornac_env):
 
 @pytest.fixture(autouse=True)
 def reset_logs(caplog, capsys):
+    logging.getLogger('sh').setLevel(logging.ERROR)
     caplog.clear()
     capsys.readouterr()
 

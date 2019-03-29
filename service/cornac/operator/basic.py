@@ -9,7 +9,7 @@ import sys
 from pathlib import Path
 
 from ..iaas import IaaS
-from ..ssh import RemoteShell
+from ..ssh import Password, RemoteShell
 
 
 logger = logging.getLogger(__name__)
@@ -61,7 +61,8 @@ class BasicOperator(object):
         master = command['MasterUsername']
         shell([
             helper,
-            "create-masteruser", master, command['MasterUserPassword'],
+            "create-masteruser", master,
+            Password(command['MasterUserPassword']),
         ])
 
         # Creating database
