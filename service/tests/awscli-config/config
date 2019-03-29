@@ -1,0 +1,10 @@
+[default]
+output = json
+
+[plugins]
+endpoint = awscli_plugin_endpoint
+
+[profile local]
+region = local
+rds =
+    endpoint_url = http://localhost:5000/rds

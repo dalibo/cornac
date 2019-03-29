@@ -1,11 +1,13 @@
 import os
 import sys
 from functools import partial
+from pathlib import Path
 from subprocess import Popen
 from time import sleep
 
 import pytest
 import requests.exceptions
+from sh import aws as awscli
 
 from cornac import create_app
 from cornac.iaas import IaaS
@@ -16,6 +18,18 @@ def app(cornac_env):
     app = create_app(environ=cornac_env)
     with app.app_context():
         yield app
+
+
+@pytest.fixture(scope='session')
+def aws(cornac_env):
+    awscli_config = Path(__file__).parent.parent / 'awscli-config'
+    aws_env = dict(
+        cornac_env,
+        AWS_CONFIG_FILE=str(awscli_config / 'config'),
+        AWS_PROFILE='local',
+        AWS_SHARED_CREDENTIALS_FILE=str(awscli_config / 'credentials')
+    )
+    yield partial(awscli, _env=aws_env)
 
 
 @pytest.fixture(scope='session', autouse=True)
@@ -43,7 +57,9 @@ def cornac_env():
     clean_environ = dict(
         (k, v) for k, v in os.environ.items()
         if k in preserved_vars or
-        (not k.startswith('CORNAC_') and not k.startswith('PG'))
+        (not k.startswith('AWS_') and
+         not k.startswith('PG') and
+         not k.startswith('CORNAC_'))
     )
     # Reuse local prefix.
     prefix = 'test' + os.environ.get('CORNAC_MACHINE_PREFIX', 'cornac-')
