@@ -1,4 +1,5 @@
 import logging
+import re
 
 from . import errors
 
@@ -24,6 +25,8 @@ def authenticate(request):
 
 
 class Authorization(object):
+    _parameter_re = re.compile(r'([A-Za-z]+)=([^, ]*)')
+
     @classmethod
     def parse(cls, raw):
         # raw is Authorization header value as bytes, in the following format:
@@ -33,24 +36,38 @@ class Authorization(object):
         # https://docs.aws.amazon.com/AmazonS3/latest/API/sigv4-auth-using-authorization-header.html
         # explains details.
 
-        algorithm, values = raw.split(maxsplit=1)
-        credential, signed_headers, signature = values.split(',')
-        _, credential = credential.strip().split('=')
-        credential = credential.split('/')
-        access_key, date, region_name, service_name, terminator = credential
-        _, signed_headers = signed_headers.strip().split('=')
-        signed_headers = signed_headers.split(';')
-        _, signature = signature.strip().split('=')
-        return cls(
-            access_key=access_key,
-            algorithm=algorithm,
-            date=date,
-            region_name=region_name,
-            service_name=service_name,
-            signature=signature,
-            signed_headers=signed_headers,
-            terminator=terminator,
-        )
+        kw = {}
+        kw['algorithm'], parameters = raw.split(maxsplit=1)
+
+        missing_parameters = {'Credential', 'SignedHeaders', 'Signature'}
+        for match in cls._parameter_re.finditer(parameters):
+            key, value = match.groups()
+            if key in missing_parameters:
+                missing_parameters.remove(key)
+            if 'Credential' == key:
+                value = value.split('/')
+                access_key, date, region_name, service_name, terminator = value
+                kw.update(
+                    access_key=access_key,
+                    date=date,
+                    region_name=region_name,
+                    service_name=service_name,
+                    terminator=terminator
+                )
+            elif 'SignedHeaders' == key:
+                kw['signed_headers'] = value.split(';')
+            elif 'Signature' == key:
+                kw['signature'] = value
+
+        if missing_parameters:
+            raise errors.IncompleteSignature(
+                ' '.join(
+                    f"Authorization header requires '{k}'parameter."
+                    for k in missing_parameters) +
+                f'Authorization={raw}'
+            )
+
+        return cls(**kw)
 
     def __init__(self, access_key, algorithm, date, region_name, service_name,
                  signature, signed_headers, terminator):

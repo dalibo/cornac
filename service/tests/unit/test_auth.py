@@ -15,7 +15,7 @@ def test_missing_token(app):
 
 
 def test_parse_authorization():
-    from cornac.web.auth import Authorization
+    from cornac.web.auth import Authorization, errors
 
     raw = (
         'AWS4-HMAC-SHA256 '
@@ -32,3 +32,11 @@ def test_parse_authorization():
     assert 'aws4_request' == value.terminator
     assert ['content-type', 'host', 'x-amz-date'] == value.signed_headers
     assert '7313b609a8f3f794d9408c4a4a2327b9a2e8ffdc3ecb47' == value.signature
+
+    raw = (
+        'AWS4-HMAC-SHA256 '
+        'Credential=AKIAIO46HSYHYN/20190409/eu-west-3/rds/aws4_request, '
+        'SignedHeaders=content-type;host;x-amz-date, ')
+
+    with pytest.raises(errors.IncompleteSignature):
+        Authorization.parse(raw)

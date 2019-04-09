@@ -33,6 +33,10 @@ class DBInstanceNotFound(RDSError):
         super().__init__(description=f"DBInstance {identifier} not found.")
 
 
+class IncompleteSignature(RDSError):
+    code = 400
+
+
 class InvalidAction(RDSError):
     code = 400
     description = (
