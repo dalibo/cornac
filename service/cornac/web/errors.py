@@ -38,3 +38,8 @@ class InvalidAction(RDSError):
     description = (
         'The action or operation requested is invalid. '
         'Verify that the action is typed correctly.')
+
+
+class MissingAuthenticationToken(RDSError):
+    code = 403
+    description = 'Missing Authentication Token'
