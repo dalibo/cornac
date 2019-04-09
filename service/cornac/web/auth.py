@@ -26,10 +26,24 @@ def authenticate(request, credentials=None):
             authorization, e)
         raise errors.MissingAuthenticationToken()
 
-    if authorization.access_key not in credentials:
+    try:
+        secret_key = credentials[authorization.access_key]
+    except KeyError:
         raise errors.InvalidClientTokenId()
 
+    check_request_signature(
+        request,
+        authorization, secret_key=secret_key,
+        region=current_app.config['REGION'])
+
     return authorization.access_key
+
+
+def check_request_signature(request, authorization, secret_key, region):
+    # Reuse botocore API to validate signature.
+    if 'AWS4-HMAC-SHA256' != authorization.algorithm:
+        raise errors.IncompleteSignature(
+            f"Unsupported AWS 'algorithm': '{authorization.algorithm}'")
 
 
 class Authorization(object):
@@ -77,8 +91,9 @@ class Authorization(object):
 
         return cls(**kw)
 
-    def __init__(self, access_key, algorithm, date, region_name, service_name,
-                 signature, signed_headers, terminator):
+    def __init__(self, *, access_key, algorithm='AWS4-HMAC-SHA256', date,
+                 region_name='local', service_name='rds',
+                 signature, signed_headers='host', terminator='aws4_request'):
         attrs = locals()
         del attrs['self']
         self.__dict__.update(attrs)

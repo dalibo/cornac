@@ -46,3 +46,14 @@ def test_parse_authorization():
 
     with pytest.raises(errors.IncompleteSignature):
         Authorization.parse(raw)
+
+
+def test_check_signature(mocker):
+    from cornac.web.auth import Authorization, check_request_signature, errors
+
+    req = mocker.Mock(name='request')
+    auth = Authorization(
+        access_key='k', date='d', signature='S', algorithm='unknown')
+
+    with pytest.raises(errors.IncompleteSignature):
+        check_request_signature(req, auth, secret_key='X', region='local')

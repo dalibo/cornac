@@ -34,6 +34,9 @@ NETWORK = None
 # datacenter1/vm/templates/base-cornac.
 ORIGINAL_MACHINE = 'base-cornac'
 
+# Region name as used for request signing.
+REGION = 'local'
+
 # DSN to Postgres database.
 SQLALCHEMY_DATABASE_URI = None
 
