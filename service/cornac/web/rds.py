@@ -2,7 +2,7 @@ import logging
 from functools import partial
 from uuid import uuid4
 
-from flask import Blueprint, current_app, request
+from flask import Blueprint, current_app, g, request
 from werkzeug.exceptions import HTTPException
 
 from . import (
@@ -10,24 +10,19 @@ from . import (
     errors,
     xml,
 )
+from .auth import authenticate
 
 
 blueprint = Blueprint('rds', __name__)
 logger = logging.getLogger(__name__)
 
 
-def authenticate(request):
-    try:
-        request.headers['Authorization']
-    except KeyError:
-        raise errors.MissingAuthenticationToken()
-
-
 def log(requestid, action_name, identifier, result, code=200,
-        level=logging.INFO):
+        level=logging.INFO, access_key='-'):
     # Composable helper for request logging.
     current_app.logger.log(
-        level, "RDS %s %s %s %s", action_name, identifier, code, result)
+        level, "RDS %s %s %s %s %s",
+        access_key, action_name, identifier, code, result)
 
 
 @blueprint.route("/rds", methods=["POST"])
@@ -41,7 +36,8 @@ def main():
     log_ = partial(log, requestid, action_name, identifier)
 
     try:
-        authenticate(request)
+        g.access_key = authenticate(request)
+        log_ = partial(log_, access_key=g.access_key)
         action = getattr(actions, action_name, None)
         if action is None:
             logger.warning("Unknown RDS action: %s.", action_name)
