@@ -1,13 +1,18 @@
 import logging
 import re
 
+from flask import current_app
+
 from . import errors
 
 
 logger = logging.getLogger(__name__)
 
 
-def authenticate(request):
+def authenticate(request, credentials=None):
+    if credentials is None:
+        credentials = current_app.config['CREDENTIALS']
+
     try:
         authorization = request.headers['Authorization']
     except KeyError:
@@ -20,6 +25,9 @@ def authenticate(request):
             "Failed to parse Authorization header: %.40s: %s.",
             authorization, e)
         raise errors.MissingAuthenticationToken()
+
+    if authorization.access_key not in credentials:
+        raise errors.InvalidClientTokenId()
 
     return authorization.access_key
 

@@ -118,7 +118,10 @@ Finally, setup AWSCLI profile:
 ``` console
 $ pip install awscli awscli-plugin-endpoint
 $ aws configure set plugins.endpoint awscli_plugin_endpoint
-$ aws configure --profile local  # Use dumb values.
+$ aws configure --profile local
+AWS Access Key ID: DEFAULTACCESSKEY
+AWS Secret Access Key: notsecret
+…
 $ aws configure --profile local set rds.endpoint_url http://localhost:5000/rds  # Point to cornac listen URL
 ```
 

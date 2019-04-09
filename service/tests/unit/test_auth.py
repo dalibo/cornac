@@ -13,6 +13,12 @@ def test_missing_token(app):
         with pytest.raises(errors.MissingAuthenticationToken):
             authenticate(request)
 
+    minimal = 'algo Credential=k/d/rg/rds/term, SignedHeaders=X, Signature=X'
+
+    with app.test_request_context(headers=[('Authorization', minimal)]):
+        with pytest.raises(errors.InvalidClientTokenId):
+            authenticate(request, credentials=dict(key='notsecret'))
+
 
 def test_parse_authorization():
     from cornac.web.auth import Authorization, errors

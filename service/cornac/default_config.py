@@ -4,6 +4,11 @@
 # You can override every settings using environment by prefixing setting with
 # CORNAC_. e.g CORNAC_IAAS will configure IAAS setting.
 
+# A mapping of access key and secret key.
+CREDENTIALS = {
+    'DEFAULTACCESSKEY': 'notsecret',
+}
+
 # Domain suffix to resolve guest IP from DNS.
 DNS_DOMAIN = ''
 
