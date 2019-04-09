@@ -16,6 +16,7 @@ tenacity = "^5.0"
 dramatiq-pg = "~0.4.1"
 flask-dramatiq = "^0.4.0"
 bjoern = "^2.2"
+botocore = "^1.12"
 
 [tool.poetry.dev-dependencies]
 flake8 = "^3.7"

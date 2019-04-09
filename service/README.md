@@ -113,7 +113,10 @@ Cornac is now ready to accept any RDS request!
 
 ## Using awscli
 
-Finally, setup AWSCLI profile:
+Finally, setup AWSCLI profile. Default cornac's region is `local`. Also, there
+is a preconfigured credential with access key `DEFAULTACCESSKEY` and secret
+`notsecret`. To use cornac as an alternative endpoint, awscli requires the
+endpoint plugin. This ends up with the following commands:
 
 ``` console
 $ pip install awscli awscli-plugin-endpoint
@@ -121,6 +124,7 @@ $ aws configure set plugins.endpoint awscli_plugin_endpoint
 $ aws configure --profile local
 AWS Access Key ID: DEFAULTACCESSKEY
 AWS Secret Access Key: notsecret
+Default region name: local
 …
 $ aws configure --profile local set rds.endpoint_url http://localhost:5000/rds  # Point to cornac listen URL
 ```

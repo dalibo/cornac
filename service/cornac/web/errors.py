@@ -9,6 +9,7 @@ class RDSError(HTTPException):
     rdscode = 'InternalFailure'
 
     def __init__(self, code=None, rdscode=None, **kw):
+        kw.setdefault('description', self.description)
         super().__init__(**kw)
         if code:
             self.code = code
@@ -52,3 +53,7 @@ class InvalidClientTokenId(RDSError):
 class MissingAuthenticationToken(RDSError):
     code = 403
     description = 'Missing Authentication Token'
+
+
+class SignatureDoesNotMatch(RDSError):
+    code = 403

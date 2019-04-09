@@ -1,7 +1,12 @@
 import logging
 import re
+from datetime import datetime
 
+from botocore.auth import SigV4Auth, SIGV4_TIMESTAMP
+from botocore.awsrequest import AWSRequest
+from botocore.credentials import Credentials
 from flask import current_app
+from werkzeug.urls import url_encode
 
 from . import errors
 
@@ -39,11 +44,48 @@ def authenticate(request, credentials=None):
     return authorization.access_key
 
 
-def check_request_signature(request, authorization, secret_key, region):
+def check_request_signature(request, authorization, secret_key,
+                            region='local', now=None):
     # Reuse botocore API to validate signature.
     if 'AWS4-HMAC-SHA256' != authorization.algorithm:
         raise errors.IncompleteSignature(
             f"Unsupported AWS 'algorithm': '{authorization.algorithm}'")
+
+    creds = Credentials(authorization.access_key, secret_key)
+    signer = SigV4Auth(creds, 'rds', region)
+    awsrequest = make_boto_request(request, authorization.signed_headers)
+    if now is None:
+        now = datetime.utcnow()
+    awsrequest.context['timestamp'] = now.strftime(SIGV4_TIMESTAMP)
+    canonical_request = signer.canonical_request(awsrequest)
+    string_to_sign = signer.string_to_sign(awsrequest, canonical_request)
+    signature = signer.signature(string_to_sign, awsrequest)
+
+    if signature != authorization.signature:
+        raise errors.SignatureDoesNotMatch(description=(
+            "The request signature we calculated does not match the signature "
+            "you provided. Check your AWS Secret Access Key and signing "
+            "method. Consult the service documentation for details."
+        ))
+
+
+def make_boto_request(request, headers_to_sign=None):
+    # Adapt a Flask request object to AWSRequest.
+    if headers_to_sign is None:
+        headers_to_sign = [h.lower() for h in request.headers.keys()]
+    headers = {
+        k: v for k, v in request.headers.items()
+        if k.lower() in headers_to_sign}
+    # Re-encode back form data. Flask loose it :/ We may want to subclass
+    # Flask/Werkzeug Request class to keep the raw_data value before decoding
+    # form-data. Say, only if content-length is below 1024 bytes.
+    data = url_encode(request.form, 'utf-8')
+    return AWSRequest(
+        method=request.method,
+        url=request.url,
+        headers=headers,
+        data=data,
+    )
 
 
 class Authorization(object):
