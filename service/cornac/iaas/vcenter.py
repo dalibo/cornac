@@ -12,7 +12,7 @@ from urllib.parse import (
     urlparse,
 )
 
-
+import tenacity
 from pyVim.connect import (
     Disconnect,
     SmartConnect,
@@ -44,6 +44,18 @@ def lint_error():
         raise Exception(e.msg) from e
 
 
+# Retryier for operation on vCenter when vCenter server loose connection to
+# ESXi host.
+retry_esx_connection = tenacity.retry(
+    after=tenacity.after_log(logger, logging.DEBUG),
+    reraise=True,
+    retry=(tenacity.retry_if_exception_type(vim.fault.InvalidHostState) |
+           tenacity.retry_if_exception_type(vmodl.fault.HostNotConnected)),
+    stop=tenacity.stop_after_attempt(5),
+    wait=tenacity.wait_fixed(1),
+)
+
+
 class vCenter(IaaS):
     @classmethod
     def connect(cls, url, config):
@@ -64,6 +76,12 @@ class vCenter(IaaS):
         self.config = config
         # si stands for ServiceInstance.
         self.si = si
+
+    @retry_esx_connection
+    def clone_machine(self, origin, name, clonespec):
+        logger.debug("Cloning %s as %s.", origin.name, name)
+        task = origin.Clone(folder=origin.parent, name=name, spec=clonespec)
+        return self.wait_task(task)
 
     def close(self):
         logger.debug("Disconnecting from vSphere.")
@@ -94,16 +112,15 @@ class vCenter(IaaS):
             clonespec.snapshot = sstree.snapshot
             locspec.diskMoveType = 'createNewChildDiskBacking'
 
-        logger.debug("Cloning %s as %s.", origin.name, name)
-        task = origin.Clone(folder=origin.parent, name=name, spec=clonespec)
         try:
-            machine = self.wait_task(task)
+            machine = self.clone_machine(origin, name, clonespec)
         except vim.fault.DuplicateName:
             raise KnownError(f"VM {name} already exists.")
 
         self.sysprep(machine)
         return machine
 
+    @retry_esx_connection
     def delete_machine(self, machine):
         machine = self._ensure_machine(machine)
         if 'poweredOn' == machine.runtime.powerState:
@@ -156,6 +173,7 @@ class vCenter(IaaS):
             msg = f"{machine} tools at state {machine.guest.toolsStatus}."
             raise KnownError(msg)
 
+    @retry_esx_connection
     def start_machine(self, machine, wait_ssh=False, wait_tools=False):
         machine = self._ensure_machine(machine)
         if 'poweredOn' == machine.runtime.powerState:
@@ -172,6 +190,7 @@ class vCenter(IaaS):
         if wait_tools:
             self._ensure_tools(machine)
 
+    @retry_esx_connection
     def stop_machine(self, machine):
         machine = self._ensure_machine(machine)
         if 'poweredOff' == machine.runtime.powerState:
