@@ -79,6 +79,10 @@ def test_check_authorization(app, mocker):
     with pytest.raises(errors.SignatureDoesNotMatch):
         check_request_signature(req, tmp_auth, secret_key='X')
 
+    tmp_auth = auth.copy(terminator='bad_terminator')
+    with pytest.raises(errors.SignatureDoesNotMatch):
+        check_request_signature(req, tmp_auth, secret_key='X')
+
 
 def test_check_signature(app, mocker):
     from cornac.web.auth import (
