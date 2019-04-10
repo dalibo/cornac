@@ -49,15 +49,35 @@ def test_parse_authorization():
         Authorization.parse(raw)
 
 
-def test_check_signature_errors(app, mocker):
+def test_check_authorization(app, mocker):
+    SigV4Auth = mocker.patch('cornac.web.auth.SigV4Auth')
+    mk_awsreq = mocker.patch('cornac.web.auth.make_boto_request')
+
     from cornac.web.auth import Authorization, check_request_signature, errors
 
     req = mocker.Mock(name='request')
-    auth = Authorization(
-        access_key='k', date='d', signature='S', algorithm='unknown')
+    awsreq = mk_awsreq.return_value
+    awsreq.context = {}
+    signer = SigV4Auth.return_value
+    signer.signature.return_value = 'mocked-signature'
 
+    auth = Authorization(
+        access_key='k',
+        algorithm='AWS4-HMAC-SHA256',
+        date='20190410',
+        signature='mocked-signature',
+    )
+
+    # First, ensure our mock setup is ok.
+    check_request_signature(req, auth, secret_key='X')
+
+    tmp_auth = auth.copy(algorithm='BAD-ALGO')
     with pytest.raises(errors.IncompleteSignature):
-        check_request_signature(req, auth, secret_key='X', region='local')
+        check_request_signature(req, tmp_auth, secret_key='X')
+
+    tmp_auth = auth.copy(signature='other-signature')
+    with pytest.raises(errors.SignatureDoesNotMatch):
+        check_request_signature(req, tmp_auth, secret_key='X')
 
 
 def test_check_signature(app, mocker):

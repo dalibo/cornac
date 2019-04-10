@@ -1,3 +1,4 @@
+import copy
 import logging
 import re
 from datetime import datetime
@@ -139,3 +140,8 @@ class Authorization(object):
         attrs = locals()
         del attrs['self']
         self.__dict__.update(attrs)
+
+    def copy(self, **kw):
+        clone = copy.deepcopy(self)
+        clone.__dict__.update(kw)
+        return clone
