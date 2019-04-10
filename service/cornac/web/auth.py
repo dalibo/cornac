@@ -57,6 +57,10 @@ def check_request_signature(request, authorization, secret_key,
             "Credential should be scoped with a valid terminator: "
             f"'aws4_request', not '{authorization.terminator}'.")
 
+    if 'host' not in authorization.signed_headers:
+        raise errors.SignatureDoesNotMatch(
+            "'Host' must be a 'SignedHeader' in the AWS Authorization.")
+
     creds = Credentials(authorization.access_key, secret_key)
     signer = SigV4Auth(creds, 'rds', region)
     awsrequest = make_boto_request(request, authorization.signed_headers)

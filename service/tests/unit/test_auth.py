@@ -64,6 +64,7 @@ def test_check_authorization(app, mocker):
     auth = Authorization(
         access_key='k',
         algorithm='AWS4-HMAC-SHA256',
+        signed_headers=['content-type', 'host', 'x-amz-date'],
         date='20190410',
         signature='mocked-signature',
     )
@@ -80,6 +81,10 @@ def test_check_authorization(app, mocker):
         check_request_signature(req, tmp_auth, secret_key='X')
 
     tmp_auth = auth.copy(terminator='bad_terminator')
+    with pytest.raises(errors.SignatureDoesNotMatch):
+        check_request_signature(req, tmp_auth, secret_key='X')
+
+    tmp_auth = auth.copy(signed_headers=['content-type'])
     with pytest.raises(errors.SignatureDoesNotMatch):
         check_request_signature(req, tmp_auth, secret_key='X')
 
