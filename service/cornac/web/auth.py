@@ -61,9 +61,17 @@ def check_request_signature(request, authorization, secret_key,
         raise errors.SignatureDoesNotMatch(
             "'Host' must be a 'SignedHeader' in the AWS Authorization.")
 
+    headers_key = {k.lower() for k in request.headers.keys()}
+    headers_to_sign = set(authorization.signed_headers)
+    for h in headers_to_sign:
+        if h not in headers_key:
+            raise errors.SignatureDoesNotMatch(
+                f"Authorization header requires existence of '{h}' header. "
+                f"{authorization}")
+
     creds = Credentials(authorization.access_key, secret_key)
     signer = SigV4Auth(creds, 'rds', region)
-    awsrequest = make_boto_request(request, authorization.signed_headers)
+    awsrequest = make_boto_request(request, headers_to_sign)
     if now is None:
         now = datetime.utcnow()
     awsrequest.context['timestamp'] = now.strftime(SIGV4_TIMESTAMP)
@@ -110,7 +118,7 @@ class Authorization(object):
         # https://docs.aws.amazon.com/AmazonS3/latest/API/sigv4-auth-using-authorization-header.html
         # explains details.
 
-        kw = {}
+        kw = dict(raw=raw)
         kw['algorithm'], parameters = raw.split(maxsplit=1)
 
         missing_parameters = {'Credential', 'SignedHeaders', 'Signature'}
@@ -145,10 +153,33 @@ class Authorization(object):
 
     def __init__(self, *, access_key, algorithm='AWS4-HMAC-SHA256', date,
                  region_name='local', service_name='rds',
-                 signature, signed_headers='host', terminator='aws4_request'):
+                 signature, signed_headers='host', terminator='aws4_request',
+                 raw=None):
         attrs = locals()
         del attrs['self']
         self.__dict__.update(attrs)
+
+    def __str__(self):
+        if self.raw is None:
+            scope = "/".join([
+                self.access_key, self.date, self.region_name,
+                self.service_name, self.terminator,
+            ])
+            signed_headers = ';'.join(self.signed_headers)
+            self.raw = (
+                f"{self.algorithm} "
+                f"Credential={scope}, "
+                f"SignepdHeaders={signed_headers}, "
+                f"Signature={self.signature}"
+            )
+        return self.raw
+
+    def __setattr__(self, name, value):
+        # Note that self.__dict__.update() bypasses __setattr__.
+        if name != 'raw':
+            # Invalidate serialization cache.
+            self.raw = None
+        return super().__setattr__(name, value)
 
     def copy(self, **kw):
         clone = copy.deepcopy(self)
