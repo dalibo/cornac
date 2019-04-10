@@ -12,7 +12,7 @@ from urllib.parse import (
     urlparse,
 )
 
-
+import tenacity
 from pyVim.connect import (
     Disconnect,
     SmartConnect,
@@ -44,6 +44,18 @@ def lint_error():
         raise Exception(e.msg) from e
 
 
+# Retryier for operation on vCenter when vCenter server loose connection to
+# ESXi host.
+retry_esx_connection = tenacity.retry(
+    after=tenacity.after_log(logger, logging.DEBUG),
+    reraise=True,
+    retry=(tenacity.retry_if_exception_type(vim.fault.InvalidHostState) |
+           tenacity.retry_if_exception_type(vmodl.fault.HostNotConnected)),
+    stop=tenacity.stop_after_attempt(5),
+    wait=tenacity.wait_fixed(1),
+)
+
+
 class vCenter(IaaS):
     @classmethod
     def connect(cls, url, config):
@@ -64,6 +76,12 @@ class vCenter(IaaS):
         self.config = config
         # si stands for ServiceInstance.
         self.si = si
+
+    @retry_esx_connection
+    def clone_machine(self, origin, name, clonespec):
+        logger.debug("Cloning %s as %s.", origin.name, name)
+        task = origin.Clone(folder=origin.parent, name=name, spec=clonespec)
+        return self.wait_task(task)
 
     def close(self):
         logger.debug("Disconnecting from vSphere.")
@@ -94,16 +112,15 @@ class vCenter(IaaS):
             clonespec.snapshot = sstree.snapshot
             locspec.diskMoveType = 'createNewChildDiskBacking'
 
-        logger.debug("Cloning %s as %s.", origin.name, name)
-        task = origin.Clone(folder=origin.parent, name=name, spec=clonespec)
         try:
-            machine = self.wait_task(task)
+            machine = self.clone_machine(origin, name, clonespec)
         except vim.fault.DuplicateName:
             raise KnownError(f"VM {name} already exists.")
 
         self.sysprep(machine)
         return machine
 
+    @retry_esx_connection
     def delete_machine(self, machine):
         machine = self._ensure_machine(machine)
         if 'poweredOn' == machine.runtime.powerState:
@@ -156,6 +173,7 @@ class vCenter(IaaS):
             msg = f"{machine} tools at state {machine.guest.toolsStatus}."
             raise KnownError(msg)
 
+    @retry_esx_connection
     def start_machine(self, machine, wait_ssh=False, wait_tools=False):
         machine = self._ensure_machine(machine)
         if 'poweredOn' == machine.runtime.powerState:
@@ -172,6 +190,7 @@ class vCenter(IaaS):
         if wait_tools:
             self._ensure_tools(machine)
 
+    @retry_esx_connection
     def stop_machine(self, machine):
         machine = self._ensure_machine(machine)
         if 'poweredOff' == machine.runtime.powerState:
@@ -208,60 +227,49 @@ class vCenter(IaaS):
         logger.debug("Preparing system")
         ssh(["/usr/local/bin/vhelper.sh", "sysprep"])
 
-    @contextmanager
-    def wait_update(self, obj, proppath):
+    def iter_updates(self, obj, proppath, maxupdates=5):
+        # Watch and yield first value and updates on one property of one
+        # managed object.
         propSpec = vmodl.query.PropertyCollector.PropertySpec(
             type=type(obj), all=False, pathSet=[proppath])
         filterSpec = vmodl.query.PropertyCollector.FilterSpec(
             objectSet=[vmodl.query.PropertyCollector.ObjectSpec(obj=obj)],
-            propSet=[propSpec],
-        )
-
+            propSet=[propSpec])
         pc = self.si.content.propertyCollector
         waitopts = vmodl.query.PropertyCollector.WaitOptions(
-            maxWaitSeconds=300)
+            maxObjectUpdates=1, maxWaitSeconds=300)
         pcFilter = pc.CreateFilter(filterSpec, partialUpdates=True)
+
         try:
-            initset = pc.WaitForUpdatesEx(version='', options=waitopts)
-            yield
-            logger.debug("Waiting for update on %s.%s.", obj, proppath)
-            return pc.WaitForUpdatesEx(initset.version, options=waitopts)
+            update = pc.WaitForUpdatesEx('', options=waitopts)
+            yield update.filterSet[0].objectSet[0]
+            while maxupdates > 0:
+                logger.debug("Waiting for update on %s.%s.", obj, proppath)
+                update = pc.WaitForUpdatesEx(update.version, options=waitopts)
+                yield update.filterSet[0].objectSet[0]
+                maxupdates -= 1
+        except GeneratorExit:
+            pass
         finally:
             pcFilter.Destroy()
 
+    @contextmanager
+    def wait_update(self, obj, proppath):
+        updates = self.iter_updates(obj, proppath)
+        # First iteration generates current value.
+        yield next(updates)
+        # At exit, wait for next update before returning.
+        next(updates)
+
     def wait_task(self, task):
-        # From pyvmomi samples.
-        collector = self.si.content.propertyCollector
-        obj_specs = [vmodl.query.PropertyCollector.ObjectSpec(obj=task)]
-        property_spec = vmodl.query.PropertyCollector.PropertySpec(
-            type=vim.Task, pathSet=[], all=True)
-        filter_spec = vmodl.query.PropertyCollector.FilterSpec()
-        filter_spec.objectSet = obj_specs
-        filter_spec.propSet = [property_spec]
-        pcfilter = collector.CreateFilter(filter_spec, True)
-
-        try:
-            version = state = None
-            while True:
-                update = collector.WaitForUpdates(version)
-                for filter_set in update.filterSet:
-                    for obj_set in filter_set.objectSet:
-                        task = obj_set.obj
-                        for change in obj_set.changeSet:
-                            if change.name == 'info':
-                                state = change.val.state
-                            elif change.name == 'info.state':
-                                state = change.val
-                            else:
-                                continue
-
-                            if state == vim.TaskInfo.State.success:
-                                return task.info.result
-                            elif state == vim.TaskInfo.State.error:
-                                raise task.info.error
-                version = update.version
-        finally:
-            pcfilter.Destroy()
+        for update in self.iter_updates(task, 'info.state'):
+            task = update.obj
+            newstate = update.changeSet[0].val
+            if newstate == vim.TaskInfo.State.success:
+                return task.info.result
+            elif newstate == vim.TaskInfo.State.error:
+                raise task.info.error
+            # Else, continue to wait.
 
 
 def build_customization_spec():

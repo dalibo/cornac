@@ -15,6 +15,9 @@ from cornac import create_app
 from cornac.iaas import IaaS
 
 
+logger = logging.getLogger(__name__)
+
+
 @pytest.fixture(scope='session')
 def app(cornac_env):
     app = create_app(environ=cornac_env)
@@ -61,6 +64,7 @@ def clean_vms(iaas):
     if 'KEEP' in os.environ:
         return
     for machine in iaas.list_machines():
+        logger.info("Deleting %s.", machine)
         iaas.delete_machine(machine)
 
 
