@@ -9,6 +9,7 @@ class RDSError(HTTPException):
     rdscode = 'InternalFailure'
 
     def __init__(self, code=None, rdscode=None, **kw):
+        kw.setdefault('description', self.description)
         super().__init__(**kw)
         if code:
             self.code = code
@@ -33,8 +34,26 @@ class DBInstanceNotFound(RDSError):
         super().__init__(description=f"DBInstance {identifier} not found.")
 
 
+class IncompleteSignature(RDSError):
+    code = 400
+
+
 class InvalidAction(RDSError):
     code = 400
     description = (
         'The action or operation requested is invalid. '
         'Verify that the action is typed correctly.')
+
+
+class InvalidClientTokenId(RDSError):
+    code = 403
+    description = 'The security token included in the request is invalid.'
+
+
+class MissingAuthenticationToken(RDSError):
+    code = 403
+    description = 'Missing Authentication Token'
+
+
+class SignatureDoesNotMatch(RDSError):
+    code = 403
