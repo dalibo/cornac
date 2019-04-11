@@ -23,6 +23,7 @@ from sqlalchemy.exc import IntegrityError
 
 from . import create_app
 from .core.model import DBInstance, db, connect
+from .core.user import generate_key, generate_secret
 from .core.schema import Migrator
 from .errors import KnownError
 from .iaas import IaaS
@@ -98,6 +99,16 @@ def bootstrap(ctx, pgversion, size):
         logger.debug("Already registered.")
     else:
         logger.debug("Done")
+
+
+@root.command(help="Generate access token")
+def generate_credentials():
+    access_key = generate_key()
+    secret_key = generate_secret()
+    sys.stdout.write(dedent(f"""\
+    User name,Password,Access key ID,Secret access key,Console login link
+    pouet,,{access_key},{secret_key},
+    """))
 
 
 @root.command(help="Serve on HTTP for production.")
