@@ -40,6 +40,12 @@ def test_parse_authorization():
     assert ['content-type', 'host', 'x-amz-date'] == value.signed_headers
     assert '7313b609a8f3f794d9408c4a4a2327b9a2e8ffdc3ecb47' == value.signature
 
+    assert raw == str(value)
+
+    value.date = '20190410'
+    assert raw != str(value)
+    assert value.date in str(value)
+
     raw = (
         'AWS4-HMAC-SHA256 '
         'Credential=AKIAIO46HSYHYN/20190409/eu-west-3/rds/aws4_request, '
@@ -49,15 +55,52 @@ def test_parse_authorization():
         Authorization.parse(raw)
 
 
-def test_check_signature_errors(app, mocker):
+def test_check_authorization(app, mocker):
+    SigV4Auth = mocker.patch('cornac.web.auth.SigV4Auth')
+    mk_awsreq = mocker.patch('cornac.web.auth.make_boto_request')
+
     from cornac.web.auth import Authorization, check_request_signature, errors
 
-    req = mocker.Mock(name='request')
-    auth = Authorization(
-        access_key='k', date='d', signature='S', algorithm='unknown')
+    req = mocker.Mock(name='request', headers={
+        'Content-Type': 'text/xml; charset=utf-8',
+        'Host': 'localhost',
+        'X-Amz-Date': '2019…',
+    })
+    awsreq = mk_awsreq.return_value
+    awsreq.context = {}
+    signer = SigV4Auth.return_value
+    signer.signature.return_value = 'mocked-signature'
 
+    auth = Authorization(
+        access_key='k',
+        algorithm='AWS4-HMAC-SHA256',
+        signed_headers=['content-type', 'host', 'x-amz-date'],
+        date='20190410',
+        signature='mocked-signature',
+    )
+
+    # First, ensure our mock setup is ok.
+    check_request_signature(req, auth, secret_key='X')
+
+    tmp_auth = auth.copy(algorithm='BAD-ALGO')
     with pytest.raises(errors.IncompleteSignature):
-        check_request_signature(req, auth, secret_key='X', region='local')
+        check_request_signature(req, tmp_auth, secret_key='X')
+
+    tmp_auth = auth.copy(signature='other-signature')
+    with pytest.raises(errors.SignatureDoesNotMatch):
+        check_request_signature(req, tmp_auth, secret_key='X')
+
+    tmp_auth = auth.copy(terminator='bad_terminator')
+    with pytest.raises(errors.SignatureDoesNotMatch):
+        check_request_signature(req, tmp_auth, secret_key='X')
+
+    tmp_auth = auth.copy(signed_headers=['content-type'])
+    with pytest.raises(errors.SignatureDoesNotMatch):
+        check_request_signature(req, tmp_auth, secret_key='X')
+
+    tmp_req = mocker.Mock(name='request', headers={'X-Missing-Header': ''})
+    with pytest.raises(errors.SignatureDoesNotMatch):
+        check_request_signature(tmp_req, auth, secret_key='X')
 
 
 def test_check_signature(app, mocker):
