@@ -120,14 +120,17 @@ def generate_credentials(save):
     logging.info("Saving credentials to %s.", path)
     new_file = not os.path.exists(path)
     if new_file:
-        config = dedent("""\
+        config = dedent("""
         # Created by cornac generate-credentials. Edit to adjust to your needs.
-
-        CREDENTIALS = {}
         """)
     else:
         with open(path) as fo:
             config = fo.read()
+
+    if "CREDENTIALS = {" not in config:
+        config += dedent("""
+        CREDENTIALS = {}
+        """)
 
     node = append_credentials(config, access_key, secret_key)
 
