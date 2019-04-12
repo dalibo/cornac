@@ -5,6 +5,7 @@
 #
 
 import logging
+import os.path
 from contextlib import contextmanager
 from pathlib import Path
 from urllib.parse import (
@@ -92,7 +93,7 @@ class vCenter(IaaS):
         name = f"{self.prefix}{name}"
         logger.debug("Creating %s specification.", name)
         datastore = self.find(storage_pool)
-        origin = self.find(self.config['ORIGINAL_MACHINE'])
+        origin = self.find(self.origin)
 
         clonespec = vim.vm.CloneSpec()
         clonespec.powerOn = True  # Let's power on the VM for sysprep.
@@ -146,17 +147,21 @@ class vCenter(IaaS):
         return "/dev/sdb"
 
     def list_machines(self):
+        origin = os.path.basename(self.origin)
         for child in self.si.content.rootFolder.childEntity:
             if not hasattr(child, 'vmFolder'):
                 continue
 
             for machine in child.vmFolder.childEntity:
+                if origin == machine.name:
+                    continue
+
                 if machine.name.startswith(self.prefix):
                     yield machine
 
     def _ensure_machine(self, machine_or_name):
         if isinstance(machine_or_name, str):
-            vmfolder = Path(self.config['ORIGINAL_MACHINE']).parent
+            vmfolder = Path(self.origin).parent
             objpath = f"{vmfolder}/{self.prefix}{machine_or_name}"
             machine_or_name = self.find(objpath)
         return machine_or_name

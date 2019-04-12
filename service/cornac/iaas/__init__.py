@@ -40,6 +40,10 @@ class IaaS(object):
             raise KnownError(msg)
 
     @property
+    def origin(self):
+        return self.config['MACHINE_ORIGIN'].format(**self.config)
+
+    @property
     def prefix(self):
         return self.config['MACHINE_PREFIX']
 

@@ -18,6 +18,17 @@ DNS_DOMAIN = ''
 # e.g. libvirt, vcenter+https://me:password@vcenter.acmi.lan/?no_verify=1
 IAAS = None
 
+# Provider specific name of the template machine to clone. You must install
+# Postgres and other tools. See appliance/ for how to maintain this template
+# with Ansible.
+#
+# For vSphere, must be a full path to the VM. e.g.
+# datacenter1/vm/templates/{MACHINE_PREFIX}-origin.
+#
+# The doubling of hyphen is wanted. It allow to avoid clashes with a db
+# instance named origin.
+MACHINE_ORIGIN = '{MACHINE_PREFIX}-origin'
+
 # Prefix of VM in IaaS.
 #
 # This allow to isolate several instance of cornac in the same IaaS.
@@ -27,14 +38,6 @@ MACHINE_PREFIX = 'cornac-'
 #
 # For vSphere, use absolute path e.g. 'datacenter1/network/Guest Network'
 NETWORK = None
-
-# Provider specific name of the template machine to clone. You must install
-# Postgres and other tools. See appliance/ for how to maintain this template
-# with Ansible.
-#
-# For vSphere, must be a full path to the VM. e.g.
-# datacenter1/vm/templates/base-cornac.
-ORIGINAL_MACHINE = 'base-cornac'
 
 # Region name as used for request signing.
 REGION = 'local'

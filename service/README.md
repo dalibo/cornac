@@ -66,14 +66,14 @@ IAAS = "vcenter+https://user@sso.local:password@host/?no_verify=1"
 Cornac webservice clone a template to provision a new Postgres host. You must
 prepare this VM before calling cornac API.
 
-- Create a CentOS7 VM, usually named `base-cornac`.
+- Create a CentOS7 VM, usually named `cornac--origin`.
 - Inject the SSH public key for root user.
 - Use `install.yml` playbook from `appliance/` directory to provision the VM. On
   vSphere, add the `vmware` feature.
 
 ``` console
 $ cd appliance/
-$ ansible-playbook install.yml -e host=base-cornac.virt -e features=vmware
+$ ansible-playbook install.yml -e host=cornac--origin.virt -e features=vmware
 $ ssh root@base-cornac.virt test -x /usr/pgsql-11/bin/initdb
 ```
 

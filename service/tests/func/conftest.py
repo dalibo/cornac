@@ -74,7 +74,7 @@ def cornac_env():
         'CORNAC_DNS_DOMAIN',
         'CORNAC_IAAS',
         'CORNAC_NETWORK',
-        'CORNAC_ORIGINAL_MACHINE',
+        'CORNAC_MACHINE_ORIGIN',
         'CORNAC_ROOT_PUBLIC_KEY',
         'CORNAC_STORAGE_POOL',
         'CORNAC_VCENTER_RESOURCE_POOL',
