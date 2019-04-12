@@ -75,7 +75,7 @@ def cornac_env():
         'CORNAC_IAAS',
         'CORNAC_NETWORK',
         'CORNAC_MACHINE_ORIGIN',
-        'CORNAC_ROOT_PUBLIC_KEY',
+        'CORNAC_DEPLOY_KEY',
         'CORNAC_STORAGE_POOL',
         'CORNAC_VCENTER_RESOURCE_POOL',
     ))

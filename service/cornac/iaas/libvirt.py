@@ -34,7 +34,7 @@ class LibVirtIaaS(IaaS):
         self.config = config
         # Configuration Keys:
         #
-        # ROOT_PUBLIC_KEY: SSH public key to inject to access root account
+        # DEPLOY_KEY: SSH public key to inject to access root account
         #                  on new machines.
         # DNS_DOMAIN: DNS domain to build FQDN of machine on the IaaS.
 
@@ -121,10 +121,10 @@ class LibVirtIaaS(IaaS):
                 "--hostname", name,
                 "--selinux-relabel",
             ]
-            if self.config['ROOT_PUBLIC_KEY']:
+            if self.config['DEPLOY_KEY']:
                 prepare_cmd.extend([
                     "--ssh-inject",
-                    f"root:string:{self.config['ROOT_PUBLIC_KEY']}",
+                    f"root:string:{self.config['DEPLOY_KEY']}",
                 ])
             logger.debug("Preparing machine %s.", name)
             logged_cmd(prepare_cmd)
