@@ -68,6 +68,7 @@ class InstanceEncoder:
         <Port>5432</Port>
       </Endpoint>
     {% endif %}
+      <AllocatedStorage>{{ data['AllocatedStorage'] }}</AllocatedStorage>
       <MultiAZ>{{ 'true' if data['MultiAZ'] else 'false' }}</MultiAZ>
     </DBInstance>
     """), trim_blocks=True)
