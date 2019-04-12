@@ -96,6 +96,7 @@ def cornac_env():
     conninfo = f"postgresql://cornac:1EstP4ss@{prefix}{db}{dns_domain}/{db}"
     return dict(
         clean_environ,
+        CORNAC_CONFIG=str(Path(__file__).parent.parent / 'cornac-config.py'),
         CORNAC_MACHINE_PREFIX=prefix,
         CORNAC_SQLALCHEMY_DATABASE_URI=conninfo,
     )

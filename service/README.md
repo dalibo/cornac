@@ -21,14 +21,13 @@ Cornac webservice has the following prerequisites:
 - SSH agent up and running with a private key.
 - VM must be accessible through SSH. The following documentation use `.virt` as
   resolvable domain for virtual machines.
-- a template VM called `base-cornac` with Postgres 11.
 
-The `CORNAC_SETTINGS` environment variable point to a python file containing
-regular
+By default, cornac reads `config.py` in working directory if it exists.
+`config.py` is a python file containing regular
 [Flask configuration](http://flask.pocoo.org/docs/1.0/config/#configuring-from-files)
 and cornac configuration. [Default cornac
-configuration](cornac/default_config.py) is commented. A [poc.cfg](poc.cfg)
-configuration file can be a good starting point.
+configuration](cornac/core/config/defaults.py) is a good starting point to write
+your own.
 
 Further prerequisites depends on the infrastructure provider.
 
@@ -86,7 +85,7 @@ Once the template is ready, shut it down and continue using cornac and aws CLI.
 Cornac requires a Postgres database to maintain it's inventory. Fortunately,
 cornac is able to self-bootstrap this Postgres instance using it's CLI.
 
-The Bootstrap command creates the instance and user according to the connection
+The bootstrap command creates the instance and role according to the connection
 URI. Set [Postgres connection
 URI](https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-CONNSTRING)
 in `SQLALCHEMY_DATABASE_URI` option in config file and run bootstrap like this:
@@ -99,31 +98,42 @@ Great! You already have one managed Postgres instance! Two distinct services
 runs cornac: the webserver and the background worker. Run each of them in a
 separate terminal.
 
-- For the background worker:
-  ``` console
-  $ CORNAC_SETTINGS=poc.cfg cornac worker --processes 1
-  ```
-- For the web server:
-  ``` console
-  $ CORNAC_SETTINGS=poc.cfg cornac run
-  ```
+For the background worker:
 
-Cornac is now ready to accept any RDS request!
+``` console
+$ cornac worker --processes 1
+```
+
+The web service requires credentials. You can generate a credentials pair with
+`cornac` CLI:
+
+``` console
+$ cornac generate-credentials --save
+```
+
+The `--save` flags trigger configuration update. See logs for details. Keep
+access key and secret key pair near to configure awscli later. Now run cornac
+webservice with:
+
+``` console
+$ cornac run
+```
+
+Cornac is now ready to accept authenticated RDS requests!
 
 
 ## Using awscli
 
-Finally, setup AWSCLI profile. Default cornac's region is `local`. Also, there
-is a preconfigured credential with access key `DEFAULTACCESSKEY` and secret
-`notsecret`. To use cornac as an alternative endpoint, awscli requires the
-endpoint plugin. This ends up with the following commands:
+Finally, setup AWSCLI profile. Default cornac's region is `local`. To use cornac
+as an alternative endpoint, awscli requires the endpoint plugin. This consists
+of the following commands:
 
 ``` console
 $ pip install awscli awscli-plugin-endpoint
 $ aws configure set plugins.endpoint awscli_plugin_endpoint
 $ aws configure --profile local
-AWS Access Key ID: DEFAULTACCESSKEY
-AWS Secret Access Key: notsecret
+AWS Access Key ID: <the access key>
+AWS Secret Access Key: <the secret key>
 Default region name: local
 …
 $ aws configure --profile local set rds.endpoint_url http://localhost:5000/rds  # Point to cornac listen URL
