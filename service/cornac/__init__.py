@@ -19,7 +19,7 @@ def filter_env(config, environ=os.environ):
 
 def create_app(environ=os.environ):
     app = Flask(__name__)
-    app.config.from_object(__name__ + '.default_config')
+    app.config.from_object(__name__ + '.core.config.defaults')
     if 'CORNAC_SETTINGS' in os.environ:
         path = os.path.realpath(os.environ['CORNAC_SETTINGS'])
         app.config.from_pyfile(path)
