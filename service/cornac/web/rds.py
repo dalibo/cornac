@@ -30,12 +30,15 @@ def main():
     # Bridge RDS service and Flask routing. RDS actions are not RESTful.
     payload = dict(request.form)
     action_name = payload.pop('Action')
-    payload.pop('Version')
+    version = payload.pop('Version')
     identifier = payload.get('DBInstanceIdentifier', '-')
     requestid = uuid4()
     log_ = partial(log, requestid, action_name, identifier)
 
     try:
+        if version != '2014-10-31':
+            raise errors.InvalidAction(
+                description=f"Unsupported API version {version}.")
         g.access_key = authenticate(request)
         log_ = partial(log_, access_key=g.access_key)
         action = getattr(actions, action_name, None)
