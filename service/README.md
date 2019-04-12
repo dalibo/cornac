@@ -21,7 +21,6 @@ Cornac webservice has the following prerequisites:
 - SSH agent up and running with a private key.
 - VM must be accessible through SSH. The following documentation use `.virt` as
   resolvable domain for virtual machines.
-- a template VM called `base-cornac` with Postgres 11.
 
 By default, cornac reads `config.py` in working directory if it exists.
 `config.py` is a python file containing regular
@@ -86,7 +85,7 @@ Once the template is ready, shut it down and continue using cornac and aws CLI.
 Cornac requires a Postgres database to maintain it's inventory. Fortunately,
 cornac is able to self-bootstrap this Postgres instance using it's CLI.
 
-The Bootstrap command creates the instance and user according to the connection
+The bootstrap command creates the instance and role according to the connection
 URI. Set [Postgres connection
 URI](https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-CONNSTRING)
 in `SQLALCHEMY_DATABASE_URI` option in config file and run bootstrap like this:
@@ -100,6 +99,7 @@ runs cornac: the webserver and the background worker. Run each of them in a
 separate terminal.
 
 For the background worker:
+
 ``` console
 $ cornac worker --processes 1
 ```
@@ -111,7 +111,8 @@ The web service requires credentials. You can generate a credentials pair with
 $ cornac generate-credentials --save
 ```
 
-Keep access key and secret key near to configure awscli later. Now run cornac
+The `--save` flags trigger configuration update. See logs for details. Keep
+access key and secret key pair near to configure awscli later. Now run cornac
 webservice with:
 
 ``` console
@@ -124,8 +125,8 @@ Cornac is now ready to accept authenticated RDS requests!
 ## Using awscli
 
 Finally, setup AWSCLI profile. Default cornac's region is `local`. To use cornac
-as an alternative endpoint, awscli requires the endpoint plugin. This ends up
-with the following commands:
+as an alternative endpoint, awscli requires the endpoint plugin. This consists
+of the following commands:
 
 ``` console
 $ pip install awscli awscli-plugin-endpoint
