@@ -1,4 +1,3 @@
-from datetime import datetime
 import pytest
 from flask import request
 
@@ -104,8 +103,7 @@ def test_check_authorization(app, mocker):
 
 
 def test_check_signature(app, mocker):
-    from cornac.web.auth import (
-        Authorization, check_request_signature, SIGV4_TIMESTAMP)
+    from cornac.web.auth import Authorization, check_request_signature
 
     # Reproduce a sniffed awscli request.
     sig = 'ba2313b677a9d953205cf6f1be9d9f4f4e01c0a84350c334d2f1730761375804'
@@ -142,7 +140,6 @@ def test_check_signature(app, mocker):
             'Authorization': raw_auth,
         },
     )
-    now = datetime.strptime(kw['headers']['X-Amz-Date'], SIGV4_TIMESTAMP)
     auth = Authorization.parse(raw_auth)
 
     # Ok, now check this request and signature!
@@ -150,4 +147,4 @@ def test_check_signature(app, mocker):
         check_request_signature(
             ctx.request,
             auth, secret_key='notsecret',
-            region='local', now=now)
+            region='local')

@@ -3,7 +3,7 @@ import logging
 import re
 from datetime import datetime
 
-from botocore.auth import SigV4Auth, SIGV4_TIMESTAMP
+from botocore.auth import SigV4Auth, SIGV4_TIMESTAMP, ISO8601
 from botocore.awsrequest import AWSRequest
 from botocore.credentials import Credentials
 from flask import current_app
@@ -46,7 +46,7 @@ def authenticate(request, credentials=None):
 
 
 def check_request_signature(request, authorization, secret_key,
-                            region='local', now=None):
+                            region='local'):
     # Reuse botocore API to validate signature.
     if 'AWS4-HMAC-SHA256' != authorization.algorithm:
         raise errors.IncompleteSignature(
@@ -72,9 +72,6 @@ def check_request_signature(request, authorization, secret_key,
     creds = Credentials(authorization.access_key, secret_key)
     signer = SigV4Auth(creds, 'rds', region)
     awsrequest = make_boto_request(request, headers_to_sign)
-    if now is None:
-        now = datetime.utcnow()
-    awsrequest.context['timestamp'] = now.strftime(SIGV4_TIMESTAMP)
     canonical_request = signer.canonical_request(awsrequest)
     string_to_sign = signer.string_to_sign(awsrequest, canonical_request)
     signature = signer.signature(string_to_sign, awsrequest)
@@ -89,21 +86,37 @@ def check_request_signature(request, authorization, secret_key,
 
 def make_boto_request(request, headers_to_sign=None):
     # Adapt a Flask request object to AWSRequest.
+
     if headers_to_sign is None:
         headers_to_sign = [h.lower() for h in request.headers.keys()]
     headers = {
         k: v for k, v in request.headers.items()
         if k.lower() in headers_to_sign}
-    # Re-encode back form data. Flask loose it :/ We may want to subclass
-    # Flask/Werkzeug Request class to keep the raw_data value before decoding
-    # form-data. Say, only if content-length is below 1024 bytes.
-    data = url_encode(request.form, 'utf-8')
-    return AWSRequest(
+
+    awsrequest = AWSRequest(
         method=request.method,
         url=request.url,
         headers=headers,
-        data=data,
+        # Re-encode back form data. Flask loose it :/ We may want to subclass
+        # Flask/Werkzeug Request class to keep the raw_data value before
+        # decoding form-data. Say, only if content-length is below 1024 bytes.
+        data=url_encode(request.form, 'utf-8'),
     )
+
+    # Get sig timestamp from headers.
+    if 'x-amz-date' in request.headers:
+        timestamp = request.headers['X-Amz-Date']
+    elif 'date' in request.headers:
+        date = datetime.strptime(ISO8601, request.headers['Date'])
+        timestamp = date.strftime(SIGV4_TIMESTAMP, date)
+    else:
+        raise errors.IncompleteSignature(
+            "Authorization header requires existence of either "
+            "'X-Amz-Date' or 'Date' header. "
+            f"{request.headers['Authorization']}")
+    awsrequest.context['timestamp'] = timestamp
+
+    return awsrequest
 
 
 class Authorization(object):
