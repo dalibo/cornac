@@ -19,15 +19,21 @@ def filter_env(config, environ=os.environ):
 
 def create_app(environ=os.environ):
     app = Flask(__name__)
+
+    # Config setup
     app.config.from_object(__name__ + '.core.config.defaults')
-    if 'CORNAC_SETTINGS' in os.environ:
-        path = os.path.realpath(os.environ['CORNAC_SETTINGS'])
-        app.config.from_pyfile(path)
 
     c = app.config
     c.from_mapping(filter_env(c, environ=environ))
+
+    path = os.path.realpath(app.config['CONFIG'])
+    if os.path.exists(path):
+        app.config.from_pyfile(path)
+
     if not c['DRAMATIQ_BROKER_URL']:
         c['DRAMATIQ_BROKER_URL'] = c['SQLALCHEMY_DATABASE_URI']
+
+    # Components loading.
 
     from .core.model import db
     db.init_app(app)

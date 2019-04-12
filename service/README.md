@@ -23,7 +23,7 @@ Cornac webservice has the following prerequisites:
   resolvable domain for virtual machines.
 - a template VM called `base-cornac` with Postgres 11.
 
-The `CORNAC_SETTINGS` environment variable point to a python file containing
+The `CORNAC_CONFIG` environment variable point to a python file containing
 regular
 [Flask configuration](http://flask.pocoo.org/docs/1.0/config/#configuring-from-files)
 and cornac configuration. [Default cornac
@@ -101,11 +101,11 @@ separate terminal.
 
 - For the background worker:
   ``` console
-  $ CORNAC_SETTINGS=poc.cfg cornac worker --processes 1
+  $ CORNAC_CONFIG=poc.cfg cornac worker --processes 1
   ```
 - For the web server:
   ``` console
-  $ CORNAC_SETTINGS=poc.cfg cornac run
+  $ CORNAC_CONFIG=poc.cfg cornac run
   ```
 
 Cornac is now ready to accept any RDS request!

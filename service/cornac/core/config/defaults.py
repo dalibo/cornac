@@ -4,6 +4,9 @@
 # You can override every settings using environment by prefixing setting with
 # CORNAC_. e.g CORNAC_IAAS will configure IAAS setting.
 
+# Path to config file. By default, config.py in current directory.
+CONFIG = 'config.py'
+
 # A mapping of access key and secret key.
 CREDENTIALS = {
     'DEFAULTACCESSKEY': 'notsecret',
