@@ -4,6 +4,7 @@
 # XML snippet.
 
 import logging
+from datetime import datetime
 from textwrap import dedent
 
 from jinja2 import Template
@@ -42,6 +43,8 @@ def check_create_command(command):
     if command['MultiAZ']:
         raise errors.InvalidParameterCombination(
             "Multi-AZ instance is not yet supported.")
+    now = datetime.utcnow()
+    command['InstanceCreateTime'] = now.isoformat(timespec='seconds') + 'Z'
     return command
 
 

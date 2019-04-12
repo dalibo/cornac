@@ -69,6 +69,7 @@ class InstanceEncoder:
       </Endpoint>
     {% endif %}
       <AllocatedStorage>{{ data['AllocatedStorage'] }}</AllocatedStorage>
+      <InstanceCreateTime>{{ data['InstanceCreateTime'] }}</InstanceCreateTime>
       <MultiAZ>{{ 'true' if data['MultiAZ'] else 'false' }}</MultiAZ>
     </DBInstance>
     """), trim_blocks=True)
