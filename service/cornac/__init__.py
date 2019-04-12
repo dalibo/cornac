@@ -9,31 +9,12 @@ from flask import Flask
 filterwarnings("ignore", message="The psycopg2 wheel package will be renamed")  # noqa
 
 
-def filter_env(config, environ=os.environ):
-    known_vars = set(f'CORNAC_{k}' for k in config)
-    return dict(
-        (k.replace('CORNAC_', ''), v)
-        for k, v in environ.items()
-        if k in known_vars)
-
-
 def create_app(environ=os.environ):
+
     app = Flask(__name__)
 
-    # Config setup
-    app.config.from_object(__name__ + '.core.config.defaults')
-
-    c = app.config
-    c.from_mapping(filter_env(c, environ=environ))
-
-    path = os.path.realpath(app.config['CONFIG'])
-    if os.path.exists(path):
-        app.config.from_pyfile(path)
-
-    if not c['DRAMATIQ_BROKER_URL']:
-        c['DRAMATIQ_BROKER_URL'] = c['SQLALCHEMY_DATABASE_URI']
-
-    # Components loading.
+    from .core.config import configure
+    configure(app, environ=environ)
 
     from .core.model import db
     db.init_app(app)

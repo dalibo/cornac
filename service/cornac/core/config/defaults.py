@@ -49,7 +49,7 @@ SQLALCHEMY_DATABASE_URI = None
 STORAGE_POOL = 'default'
 
 # SSH Public key used for deployement and maintainance of guests.
-ROOT_PUBLIC_KEY = None
+DEPLOY_KEY = None
 
 # vCenter specific resource pool where to place guests. Could be a host or a
 # cluster resource pool. e.g. 'datacenter1/host/esxi1/Resources
