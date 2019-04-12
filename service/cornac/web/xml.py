@@ -53,6 +53,10 @@ def make_response_xml(action, requestid, result):
     return response
 
 
+def booltostr(value):
+    return 'true' if value is True else 'false'
+
+
 class InstanceEncoder:
     # Adapt DBInstance object to RDS XML response.
 
@@ -61,28 +65,46 @@ class InstanceEncoder:
       <DBInstanceIdentifier>{{ identifier }}</DBInstanceIdentifier>
       <Engine>postgres</Engine>
       <DBInstanceStatus>{{ status }}</DBInstanceStatus>
-      <MasterUsername>postgres</MasterUsername>
     {% if endpoint_address %}
       <Endpoint>
         <Address>{{ endpoint_address }}</Address>
         <Port>5432</Port>
       </Endpoint>
     {% endif %}
-      <AllocatedStorage>{{ data['AllocatedStorage'] }}</AllocatedStorage>
-      <InstanceCreateTime>{{ data['InstanceCreateTime'] }}</InstanceCreateTime>
-      <MultiAZ>{{ 'true' if data['MultiAZ'] else 'false' }}</MultiAZ>
+    {% for field in known_fields %}
+      <{{ field }}>{{ data[field] }}</{{ field }}>
+    {% endfor %}
     </DBInstance>
     """), trim_blocks=True)
 
     def __init__(self, instance):
         self.instance = instance
 
+    _known_fields = [
+        'MasterUsername',
+        'AllocatedStorage',
+        'InstanceCreateTime',
+        'MultiAZ',
+    ]
+
     def as_xml(self):
+        data = self.instance.data or {}
         try:
-            endpoint_address = self.instance.data['Endpoint']['Address']
-        except (KeyError, TypeError):
+            endpoint_address = data['Endpoint']['Address']
+        except KeyError:
             endpoint_address = None
+
+        data = {
+            k: booltostr(v) if v in (True, False) else v
+            for k, v in data.items()
+        }
+        known_fields = [
+            h for h in self._known_fields
+            if h in data]
+
+        kw = dict(self.instance.__dict__, data=data)
         return self.XML_SNIPPET_TMPL.render(
             endpoint_address=endpoint_address,
-            **self.instance.__dict__,
+            known_fields=known_fields,
+            **kw,
         )
