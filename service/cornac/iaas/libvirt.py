@@ -103,7 +103,7 @@ class LibVirtIaaS(IaaS):
         except libvirt.libvirtError:
             clone_cmd = [
                 "virt-clone",
-                "--original", self.config['ORIGINAL_MACHINE'],
+                "--original", self.origin,
                 "--name", name,
                 "--auto-clone",
             ]
@@ -161,7 +161,10 @@ class LibVirtIaaS(IaaS):
 
     def list_machines(self):
         for domain in self.conn.listAllDomains():
-            if domain.name().startswith(self.prefix):
+            name = domain.name()
+            if name == self.origin:
+                continue
+            if name.startswith(self.prefix):
                 yield domain
 
     def _ensure_domain(self, domain_or_name):
