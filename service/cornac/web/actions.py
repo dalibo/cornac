@@ -4,6 +4,7 @@
 # XML snippet.
 
 import logging
+from datetime import datetime
 from textwrap import dedent
 
 from jinja2 import Template
@@ -21,6 +22,7 @@ from ..core.model import DBInstance, db
 logger = logging.getLogger(__name__)
 DEFAULT_CREATE_COMMAND = dict(
     EngineVersion='11',
+    MultiAZ='false',
 )
 
 
@@ -34,9 +36,20 @@ def get_instance(identifier):
         raise errors.DBInstanceNotFound(identifier)
 
 
-def CreateDBInstance(**command):
+def check_create_command(command):
     command = dict(DEFAULT_CREATE_COMMAND, **command)
     command['AllocatedStorage'] = int(command['AllocatedStorage'])
+    command['MultiAZ'] = command['MultiAZ'] == 'true'
+    if command['MultiAZ']:
+        raise errors.InvalidParameterCombination(
+            "Multi-AZ instance is not yet supported.")
+    now = datetime.utcnow()
+    command['InstanceCreateTime'] = now.isoformat(timespec='seconds') + 'Z'
+    return command
+
+
+def CreateDBInstance(**command):
+    command = check_create_command(command)
 
     instance = DBInstance()
     instance.identifier = command['DBInstanceIdentifier']

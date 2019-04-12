@@ -8,9 +8,10 @@ class RDSError(HTTPException):
         'exception or failure.')
     rdscode = 'InternalFailure'
 
-    def __init__(self, code=None, rdscode=None, **kw):
-        kw.setdefault('description', self.description)
-        super().__init__(**kw)
+    def __init__(self, description=None, code=None, rdscode=None, **kw):
+        if description is None:
+            description = self.description
+        super().__init__(description=description, **kw)
         if code:
             self.code = code
         if rdscode:
@@ -32,6 +33,10 @@ class DBInstanceNotFound(RDSError):
 
     def __init__(self, identifier):
         super().__init__(description=f"DBInstance {identifier} not found.")
+
+
+class InvalidParameterCombination(RDSError):
+    code = 400
 
 
 class IncompleteSignature(RDSError):
