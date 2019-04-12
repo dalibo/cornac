@@ -58,16 +58,16 @@ class InstanceEncoder:
 
     XML_SNIPPET_TMPL = Template(dedent("""\
     <DBInstance>
-      <DBInstanceStatus>{{ status }}</DBInstanceStatus>
       <DBInstanceIdentifier>{{ identifier }}</DBInstanceIdentifier>
       <Engine>postgres</Engine>
+      <DBInstanceStatus>{{ status }}</DBInstanceStatus>
+      <MasterUsername>postgres</MasterUsername>
     {% if endpoint_address %}
       <Endpoint>
         <Address>{{ endpoint_address }}</Address>
         <Port>5432</Port>
       </Endpoint>
     {% endif %}
-      <MasterUsername>postgres</MasterUsername>
     </DBInstance>
     """), trim_blocks=True)
 
