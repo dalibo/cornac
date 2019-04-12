@@ -7,10 +7,9 @@
 # Path to config file. By default, config.py in current directory.
 CONFIG = 'config.py'
 
-# A mapping of access key and secret key.
-CREDENTIALS = {
-    'DEFAULTACCESSKEY': 'notsecret',
-}
+# A mapping of access key and secret key. See cornac generate-credentials for
+# more.
+CREDENTIALS = {}
 
 # Domain suffix to resolve guest IP from DNS.
 DNS_DOMAIN = ''
