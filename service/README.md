@@ -99,31 +99,40 @@ Great! You already have one managed Postgres instance! Two distinct services
 runs cornac: the webserver and the background worker. Run each of them in a
 separate terminal.
 
-- For the background worker:
-  ``` console
-  $ cornac worker --processes 1
-  ```
-- For the web server:
-  ``` console
-  $ cornac run
-  ```
+For the background worker:
+``` console
+$ cornac worker --processes 1
+```
 
-Cornac is now ready to accept any RDS request!
+The web service requires credentials. You can generate a credentials pair with
+`cornac` CLI:
+
+``` console
+$ cornac generate-credentials --save
+```
+
+Keep access key and secret key near to configure awscli later. Now run cornac
+webservice with:
+
+``` console
+$ cornac run
+```
+
+Cornac is now ready to accept authenticated RDS requests!
 
 
 ## Using awscli
 
-Finally, setup AWSCLI profile. Default cornac's region is `local`. Also, there
-is a preconfigured credential with access key `DEFAULTACCESSKEY` and secret
-`notsecret`. To use cornac as an alternative endpoint, awscli requires the
-endpoint plugin. This ends up with the following commands:
+Finally, setup AWSCLI profile. Default cornac's region is `local`. To use cornac
+as an alternative endpoint, awscli requires the endpoint plugin. This ends up
+with the following commands:
 
 ``` console
 $ pip install awscli awscli-plugin-endpoint
 $ aws configure set plugins.endpoint awscli_plugin_endpoint
 $ aws configure --profile local
-AWS Access Key ID: DEFAULTACCESSKEY
-AWS Secret Access Key: notsecret
+AWS Access Key ID: <the access key>
+AWS Secret Access Key: <the secret key>
 Default region name: local
 …
 $ aws configure --profile local set rds.endpoint_url http://localhost:5000/rds  # Point to cornac listen URL

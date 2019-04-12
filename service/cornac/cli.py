@@ -8,7 +8,7 @@
 
 import errno
 import logging.config
-import os
+import os.path
 import pdb
 import sys
 from textwrap import dedent
@@ -22,6 +22,7 @@ from sqlalchemy.exc import IntegrityError
 
 
 from . import create_app
+from .core.config.writer import append_credentials
 from .core.model import DBInstance, db, connect
 from .core.user import generate_key, generate_secret
 from .core.schema import Migrator
@@ -48,7 +49,7 @@ class CornacGroup(FlaskGroup):
 
 # Root group of CLI.
 @click.group(cls=CornacGroup, create_app=create_app)
-@click.option('--verbose/-v', default=False)
+@click.option('--verbose/--quiet', default=False)
 @click.pass_context
 def root(ctx, verbose):
     appname = ctx.invoked_subcommand or 'cornac'
@@ -102,13 +103,38 @@ def bootstrap(ctx, pgversion, size):
 
 
 @root.command(help="Generate access token")
-def generate_credentials():
+@click.option('--save', is_flag=True, default=False,
+              help="Save in configuration file.")
+def generate_credentials(save):
     access_key = generate_key()
     secret_key = generate_secret()
     sys.stdout.write(dedent(f"""\
     User name,Password,Access key ID,Secret access key,Console login link
     pouet,,{access_key},{secret_key},
     """))
+
+    if not save:
+        return
+
+    path = current_app.config['CONFIG']
+    logging.info("Saving credentials to %s.", path)
+    new_file = not os.path.exists(path)
+    if new_file:
+        config = dedent("""\
+        # Created by cornac generate-credentials. Edit to adjust to your needs.
+
+        CREDENTIALS = {}
+        """)
+    else:
+        with open(path) as fo:
+            config = fo.read()
+
+    node = append_credentials(config, access_key, secret_key)
+
+    with open(path, 'w') as fo:
+        if new_file:
+            os.chmod(path, 0o600)
+        fo.write(str(node))
 
 
 @root.command(help="Serve on HTTP for production.")

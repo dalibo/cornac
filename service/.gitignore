@@ -2,3 +2,5 @@ dist/
 *.egg-info/
 .flask-history
 pip-wheel-metadata/
+config.py
+tests-func-tmp-config.py
