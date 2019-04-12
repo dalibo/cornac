@@ -27,6 +27,7 @@ def make_error_xml(error, requestid):
     response = make_response(xml)
     response.status_code = error.code
     response.content_type = 'text/xml; charset=utf-8'
+    response.headers['X-Amzn-RequestId'] = requestid
     return response
 
 
@@ -48,6 +49,7 @@ def make_response_xml(action, requestid, result):
     xml = RESPONSE_TMPL.render(**locals())
     response = make_response(xml)
     response.content_type = 'text/xml; charset=utf-8'
+    response.headers['X-Amzn-RequestId'] = requestid
     return response
 
 
