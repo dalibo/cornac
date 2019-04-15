@@ -30,6 +30,9 @@ class IaaS(object):
 
     @classmethod
     def connect(cls, url, config):
+        if url is None:
+            raise KnownError("You must configure IAAS option.")
+
         provider, _, url = url.partition('+')
         iaas_cls = cls.load_iaas(provider)
         # Let's provider class analyze URL.
