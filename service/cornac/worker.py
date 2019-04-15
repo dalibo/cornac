@@ -112,6 +112,20 @@ def reboot_db_instance(instance_id):
 
 
 @actor
+def recover_instances():
+    instances = (
+        DBInstance.query
+        .filter(DBInstance.status.in_(('available', 'stopped')))
+    )
+    for instance in instances:
+        logger.info("Ensuring %s is %s.", instance.identifier, instance.status)
+        if instance.status == 'available':
+            start_db_instance.send(instance.id)
+        elif instance.status == 'stopped':
+            stop_db_instance.send(instance.id)
+
+
+@actor
 def start_db_instance(instance_id):
     config = current_app.config
     with state_manager(instance_id) as instance:

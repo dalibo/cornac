@@ -21,7 +21,7 @@ from flask.cli import FlaskGroup
 from sqlalchemy.exc import IntegrityError
 
 
-from . import create_app
+from . import create_app, worker
 from .core.config.writer import append_credentials
 from .core.model import DBInstance, db, connect
 from .core.user import generate_key, generate_secret
@@ -180,7 +180,9 @@ def migratedb(dry):
 
 
 @root.command(help="Ensure Cornac service VM are up.")
-def recover():
+@click.option('--instances/--no-instances', default=False,
+              help="Start/stop instances according to inventory status.")
+def recover(instances):
     with IaaS.connect(current_app.config['IAAS'], current_app.config) as iaas:
         iaas.start_machine('cornac')
     connstring = current_app.config['SQLALCHEMY_DATABASE_URI']
@@ -190,8 +192,13 @@ def recover():
     wait_machine(pgurl.hostname, port=port)
     logger.info("Testing PostgreSQL connection.")
     with connect(connstring):
-        pass
-    logger.info("Cornac is ready to run.")
+        logger.info("Cornac is ready to run.")
+
+    if instances:
+        logger.info("Checking Postgres instances.")
+        logger.info("You need to start cornac worker to effectively check "
+                    "each instances.")
+        worker.recover_instances()
 
 
 def entrypoint():
