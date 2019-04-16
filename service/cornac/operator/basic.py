@@ -79,6 +79,17 @@ class BasicOperator(object):
             DBInstanceIdentifier=name,
         )
 
+    def is_running(self, machine):
+        # Check whether *Postgres* is running.
+        address = self.iaas.endpoint(machine)
+        shell = RemoteShell('root', address)
+        try:
+            shell([self.helper, "psql", "-l"])
+            return True
+        except Exception as e:
+            logger.debug("Failed to execute SQL in Postgres: %s.", e)
+            return False
+
 
 def test_main():
     # Hard coded real test case, for PoC development.
