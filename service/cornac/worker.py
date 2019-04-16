@@ -75,6 +75,7 @@ def state_manager(instance, from_=None, to_='available'):
         raise
     else:
         instance.status = to_
+        instance.status_message = None
     finally:
         db.session.commit()
 
