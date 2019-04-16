@@ -108,6 +108,28 @@ def delete_db_instance(instance_id):
 
 
 @actor
+def inspect_instance(instance_id):
+    instance = get_instance(instance_id)
+    config = current_app.config
+    with IaaS.connect(config['IAAS'], config) as iaas:
+        if iaas.is_running(instance.identifier):
+            operator = BasicOperator(iaas, config)
+            if operator.is_running(instance.identifier):
+                instance.status = 'available'
+                instance.status_message = None
+            else:
+                instance.status = 'failed'
+                instance.status_message = \
+                    'VM is running but Postgres is not running.'
+        else:
+            instance.status = 'stopped'
+            instance.status_message = None
+
+    db.session.commit()
+    logger.info("%s inspected.", instance)
+
+
+@actor
 def reboot_db_instance(instance_id):
     config = current_app.config
     with state_manager(instance_id) as instance:

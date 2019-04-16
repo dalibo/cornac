@@ -141,6 +141,21 @@ def generate_credentials(save):
         fo.write(str(node))
 
 
+@root.command(help="Inspect IaaS to update inventory.")
+@click.argument('identifier', default='__all__')
+def inspect(identifier):
+    qry = DBInstance.query
+    if identifier == '__all__':
+        instances = qry.all()
+    else:
+        instance = qry.filter(DBInstance.identifier == identifier).one()
+        instances = [instance]
+
+    for instance in instances:
+        logger.debug("Queuing inspection of %s.", instance)
+        worker.inspect_instance.send(instance.id)
+
+
 @root.command(help="Serve on HTTP for production.")
 @click.argument('listen', default='')
 def serve(listen):
