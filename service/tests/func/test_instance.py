@@ -4,6 +4,7 @@ from contextlib import contextmanager
 from time import sleep
 
 import psycopg2
+from sh import cornac
 
 
 logger = logging.getLogger(__name__)
@@ -68,6 +69,19 @@ def test_reboot_db_instance(aws, rds, worker):
 
     with pgconnect(out['DBInstance'], password=PGPASSWORD) as curs:
         curs.execute("SELECT NOW()")
+
+
+def test_inspect_stopped(aws, cornac_env, iaas, rds):
+    iaas.stop_machine('test0')
+    cornac("--verbose", "inspect", _err_to_out=True, _env=cornac_env)
+    cmd = aws(
+        "rds", "describe-db-instances",
+        "--db-instance-identifier", "test0",
+    )
+    out = json.loads(cmd.stdout)
+    instance, = out['DBInstances']
+    assert 'test0' == instance['DBInstanceIdentifier']
+    assert 'stopped' == instance['DBInstanceStatus']
 
 
 def test_delete_db_instance(aws, iaas, rds, worker):

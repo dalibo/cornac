@@ -43,6 +43,15 @@ def actor(fn):
     return actor_wrapper
 
 
+def get_instance(instance):
+    if isinstance(instance, int):
+        instance = DBInstance.query.get(instance)
+        if not instance:
+            raise TaskStop(f"Unknown instance {instance}.")
+    logger.info("Working on %s.", instance)
+    return instance
+
+
 @contextmanager
 def state_manager(instance, from_=None, to_='available'):
     # Manage the state of an instance, when working with a single instance.
@@ -50,10 +59,7 @@ def state_manager(instance, from_=None, to_='available'):
     # defined as to_. On error, the instance state is set to failed. SQLAlchemy
     # db session is always committed.
 
-    if isinstance(instance, int):
-        instance = DBInstance.query.get(instance)
-        if not instance:
-            raise TaskStop(f"Unknown instance {instance}.")
+    instance = get_instance(instance)
 
     if from_ and from_ != instance.status:
         raise KnownError(f"{instance} is not in state {from_}.")
@@ -69,6 +75,7 @@ def state_manager(instance, from_=None, to_='available'):
         raise
     else:
         instance.status = to_
+        instance.status_message = None
     finally:
         db.session.commit()
 
@@ -98,6 +105,28 @@ def delete_db_instance(instance_id):
         with IaaS.connect(config['IAAS'], config) as iaas:
             iaas.delete_machine(instance.identifier)
         db.session.delete(instance)
+
+
+@actor
+def inspect_instance(instance_id):
+    instance = get_instance(instance_id)
+    config = current_app.config
+    with IaaS.connect(config['IAAS'], config) as iaas:
+        if iaas.is_running(instance.identifier):
+            operator = BasicOperator(iaas, config)
+            if operator.is_running(instance.identifier):
+                instance.status = 'available'
+                instance.status_message = None
+            else:
+                instance.status = 'failed'
+                instance.status_message = \
+                    'VM is running but Postgres is not running.'
+        else:
+            instance.status = 'stopped'
+            instance.status_message = None
+
+    db.session.commit()
+    logger.info("%s inspected.", instance)
 
 
 @actor

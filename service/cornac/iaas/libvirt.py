@@ -142,7 +142,7 @@ class LibVirtIaaS(IaaS):
                 return logger.debug("Already deleted.")
             raise
         state, _ = domain.state()
-        if libvirt.VIR_DOMAIN_RUNNING == state:
+        if self.is_running(domain):
             domain.destroy()
 
         xml = ET.fromstring(domain.XMLDesc())
@@ -159,6 +159,11 @@ class LibVirtIaaS(IaaS):
             0
         )
 
+    def is_running(self, domain_or_name):
+        domain = self._ensure_domain(domain_or_name)
+        state, _ = domain.state()
+        return libvirt.VIR_DOMAIN_RUNNING == state
+
     def list_machines(self):
         for domain in self.conn.listAllDomains():
             name = domain.name()
@@ -173,7 +178,8 @@ class LibVirtIaaS(IaaS):
             domain_or_name = self.conn.lookupByName(name)
         return domain_or_name
 
-    def endpoint(self, domain):
+    def endpoint(self, domain_or_name):
+        domain = self._ensure_domain(domain_or_name)
         # Let's DNS resolve machine IP for now.
         return domain.name() + self.config['DNS_DOMAIN']
 
@@ -206,7 +212,7 @@ class LibVirtIaaS(IaaS):
         domain = self._ensure_domain(domain)
         name = domain.name()
         state, _ = domain.state()
-        if libvirt.VIR_DOMAIN_RUNNING == state:
+        if self.is_running(domain):
             logger.debug("VM %s running.", name)
         else:
             logger.info("Starting VM %s.", name)

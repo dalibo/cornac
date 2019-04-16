@@ -58,3 +58,6 @@ class DBInstance(db.Model):
     data = db.Column(JSONB)
     iaas_data = db.Column(JSONB)
     operator_data = db.Column(JSONB)
+
+    def __str__(self):
+        return f'instance #{self.id} {self.identifier} ({self.status})'

@@ -124,14 +124,15 @@ class vCenter(IaaS):
     @retry_esx_connection
     def delete_machine(self, machine):
         machine = self._ensure_machine(machine)
-        if 'poweredOn' == machine.runtime.powerState:
+        if self.is_running(machine):
             logger.debug("Powering off %s.", machine)
             with self.wait_update(machine, 'runtime.powerState'):
                 self.wait_task(machine.PowerOff())
         logger.debug("Destroying %s.", machine)
         return self.wait_task(machine.Destroy_Task())
 
-    def endpoint(self, machine):
+    def endpoint(self, machine_or_name):
+        machine = self._ensure_machine(machine_or_name)
         return machine.name + self.config['DNS_DOMAIN']
 
     def find(self, path):
@@ -145,6 +146,10 @@ class vCenter(IaaS):
         # spec. Let's assume things are simple and reproducible. cf.
         # https://communities.vmware.com/thread/298072
         return "/dev/sdb"
+
+    def is_running(self, machine_or_name):
+        machine = self._ensure_machine(machine_or_name)
+        return 'poweredOn' == machine.runtime.powerState
 
     def list_machines(self):
         origin = os.path.basename(self.origin)
@@ -163,7 +168,10 @@ class vCenter(IaaS):
         if isinstance(machine_or_name, str):
             vmfolder = Path(self.origin).parent
             objpath = f"{vmfolder}/{self.prefix}{machine_or_name}"
-            machine_or_name = self.find(objpath)
+            try:
+                machine_or_name = self.find(objpath)
+            except KeyError:
+                raise KnownError(f"{objpath} does not exists in IaaS.")
         return machine_or_name
 
     def _ensure_tools(self, machine):
@@ -181,7 +189,7 @@ class vCenter(IaaS):
     @retry_esx_connection
     def start_machine(self, machine, wait_ssh=False, wait_tools=False):
         machine = self._ensure_machine(machine)
-        if 'poweredOn' == machine.runtime.powerState:
+        if self.is_running(machine):
             logger.debug("%s is already powered.", machine)
         else:
             with self.wait_update(machine, 'runtime.powerState'):
