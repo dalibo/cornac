@@ -18,6 +18,8 @@ logger = logging.getLogger(__name__)
 class BasicOperator(object):
     # Implementation using pghelper.sh
 
+    helper = '/usr/local/bin/pghelper.sh'
+
     def __init__(self, iaas, config):
         self.iaas = iaas
         self.config = config
@@ -38,8 +40,7 @@ class BasicOperator(object):
         shell.wait()
         logger.debug("Sending helper script.")
         local_helper = str(Path(__file__).parent / 'pghelper.sh')
-        helper = '/usr/local/bin/pghelper.sh'
-        shell.copy(local_helper, helper)
+        shell.copy(local_helper, self.helper)
 
         # Formatting disk
         try:
@@ -47,31 +48,31 @@ class BasicOperator(object):
             shell(["test", "-d", "/dev/Postgres"])
         except Exception:
             dev = self.iaas.guess_data_device_in_guest(machine)
-            shell([helper, "prepare-disk", dev])
+            shell([self.helper, "prepare-disk", dev])
             shell([
-                helper, "create-instance",
+                self.helper, "create-instance",
                 command['EngineVersion'],
                 command['DBInstanceIdentifier'],
             ])
-            shell([helper, "start"])
+            shell([self.helper, "start"])
         else:
             logger.debug("Reusing Postgres instance.")
 
         # Master user
         master = command['MasterUsername']
         shell([
-            helper,
+            self.helper,
             "create-masteruser", master,
             Password(command['MasterUserPassword']),
         ])
 
         # Creating database
-        bases = shell([helper, "psql", "-l"])
+        bases = shell([self.helper, "psql", "-l"])
         if f"\n {name} " in bases:
             logger.debug("Reusing database %s.", name)
         else:
             logger.debug("Creating database %s.", name)
-            shell([helper, "create-database", name, master])
+            shell([self.helper, "create-database", name, master])
 
         return dict(
             Endpoint=dict(Address=address, Port=5432),
