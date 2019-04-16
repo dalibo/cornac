@@ -18,6 +18,7 @@ import bjoern
 import click
 from flask import current_app
 from flask.cli import FlaskGroup
+from flask.globals import _app_ctx_stack
 from sqlalchemy.exc import IntegrityError
 
 
@@ -146,9 +147,18 @@ def serve(listen):
     host, _, port = listen.partition(':')
     host = host or 'localhost'
     port = int(port or 5000)
-    app = current_app._get_current_object()
+
+    # Remove global CLI app context so that app context is set and torn down on
+    # each request. This way, Flask-SQLAlchemy app context teardown is called
+    # and session is properly remove upon each request.
+    ctx = _app_ctx_stack.pop()
+
     logger.info("Serving on http://%s:%s/.", host, port)
-    bjoern.run(app, host, port)
+    try:
+        bjoern.run(ctx.app, host, port)
+    finally:
+        # Push back ctx so that CLI context is preserved
+        ctx.push()
 
 
 @root.command(help="Migrate schema and database of cornac database.")
