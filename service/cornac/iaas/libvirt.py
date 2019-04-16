@@ -173,7 +173,8 @@ class LibVirtIaaS(IaaS):
             domain_or_name = self.conn.lookupByName(name)
         return domain_or_name
 
-    def endpoint(self, domain):
+    def endpoint(self, domain_or_name):
+        domain = self._ensure_domain(domain_or_name)
         # Let's DNS resolve machine IP for now.
         return domain.name() + self.config['DNS_DOMAIN']
 

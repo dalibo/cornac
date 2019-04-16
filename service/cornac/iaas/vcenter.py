@@ -131,7 +131,8 @@ class vCenter(IaaS):
         logger.debug("Destroying %s.", machine)
         return self.wait_task(machine.Destroy_Task())
 
-    def endpoint(self, machine):
+    def endpoint(self, machine_or_name):
+        machine = self._ensure_machine(machine_or_name)
         return machine.name + self.config['DNS_DOMAIN']
 
     def find(self, path):
