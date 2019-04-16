@@ -164,7 +164,10 @@ class vCenter(IaaS):
         if isinstance(machine_or_name, str):
             vmfolder = Path(self.origin).parent
             objpath = f"{vmfolder}/{self.prefix}{machine_or_name}"
-            machine_or_name = self.find(objpath)
+            try:
+                machine_or_name = self.find(objpath)
+            except KeyError:
+                raise KnownError(f"{objpath} does not exists in IaaS.")
         return machine_or_name
 
     def _ensure_tools(self, machine):
