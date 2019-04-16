@@ -43,6 +43,15 @@ def actor(fn):
     return actor_wrapper
 
 
+def get_instance(instance):
+    if isinstance(instance, int):
+        instance = DBInstance.query.get(instance)
+        if not instance:
+            raise TaskStop(f"Unknown instance {instance}.")
+    logger.info("Working on %s.", instance)
+    return instance
+
+
 @contextmanager
 def state_manager(instance, from_=None, to_='available'):
     # Manage the state of an instance, when working with a single instance.
@@ -50,10 +59,7 @@ def state_manager(instance, from_=None, to_='available'):
     # defined as to_. On error, the instance state is set to failed. SQLAlchemy
     # db session is always committed.
 
-    if isinstance(instance, int):
-        instance = DBInstance.query.get(instance)
-        if not instance:
-            raise TaskStop(f"Unknown instance {instance}.")
+    instance = get_instance(instance)
 
     if from_ and from_ != instance.status:
         raise KnownError(f"{instance} is not in state {from_}.")
