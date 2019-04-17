@@ -1,9 +1,9 @@
 #
 # Main cornac CLI.
 #
-# Implements few commands for cornac initialization and maintainance. Running
-# the webservice is distinct since Flask already provide a good CLI for
-# development and production should use WSGI entrypoint.
+# Implements few commands for cornac initialization and maintainance. cornac
+# CLI extends flask CLI so you don't have to bother with FLASK_APP env nor use
+# two CLI entrypoint.
 #
 
 import errno
@@ -11,18 +11,20 @@ import logging.config
 import os.path
 import pdb
 import sys
+from platform import python_version
 from textwrap import dedent
 from urllib.parse import urlparse
 
 import bjoern
 import click
-from flask import current_app
+from flask import current_app, __version__ as flask_version
 from flask.cli import FlaskGroup
 from flask.globals import _app_ctx_stack
+from pkg_resources import get_distribution
 from sqlalchemy.exc import IntegrityError
+from werkzeug import __version__ as werkzeug_version
 
-
-from . import create_app, worker
+from . import create_app, worker, __version__
 from .core.config.writer import append_credentials
 from .core.model import DBInstance, db, connect
 from .core.user import generate_key, generate_secret
@@ -48,9 +50,28 @@ class CornacGroup(FlaskGroup):
             raise
 
 
+def get_version(ctx, param, value):
+    if not value or ctx.resilient_parsing:
+        return
+    bjoern = get_distribution('bjoern')
+    python = python_version()
+    click.echo(
+        f"Cornac {__version__} ("
+        f"Python {python}, "
+        f"Flask {flask_version}, "
+        f"Werkzeug {werkzeug_version}, "
+        f"Bjoern {bjoern.version}"
+        ")"
+    )
+    ctx.exit()
+
+
 # Root group of CLI.
-@click.group(cls=CornacGroup, create_app=create_app)
+@click.group(cls=CornacGroup, create_app=create_app, add_version_option=False)
 @click.option('--verbose/--quiet', default=False)
+@click.option('--version', is_flag=True, is_eager=True,
+              expose_value=False, callback=get_version,
+              help='Show cornac version')
 @click.pass_context
 def root(ctx, verbose):
     appname = ctx.invoked_subcommand or 'cornac'

@@ -1,4 +1,5 @@
 import os.path
+from pkg_resources import get_distribution
 from warnings import filterwarnings
 
 from flask import Flask
@@ -7,6 +8,13 @@ from flask import Flask
 # psycopg2 and psycopg2-binary is a mess. You can't define OR dependency in
 # Python. Just globally ignore this for now.
 filterwarnings("ignore", message="The psycopg2 wheel package will be renamed")  # noqa
+
+
+try:
+    dist = get_distribution('pgCornac')
+    __version__ = dist.version
+except Exception:
+    __version__ = 'unknown'
 
 
 def create_app(environ=os.environ):
