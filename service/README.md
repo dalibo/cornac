@@ -77,7 +77,8 @@ $ ansible-playbook install.yml -e host=cornac--origin.virt -e features=vmware
 $ ssh root@base-cornac.virt test -x /usr/pgsql-11/bin/initdb
 ```
 
-Once the template is ready, shut it down and continue using cornac and aws CLI.
+Once the template is ready, shut it down. On VMWare, create a snapshot. Then
+continue using cornac and aws CLI.
 
 
 ## Setup Cornac Webservice
