@@ -1,0 +1,31 @@
+#!/bin/bash -eu
+#
+# This script setup execution environment for cornac process.
+#
+
+cd ~
+
+# SSH setup
+if [ -f ~/.ssh/id_rsa ] ; then
+    if [ -z "${SSH_AUTH_SOCK-}" ] ; then
+	    exec ssh-agent -- "$0" "$@"
+    fi
+
+    if ! ssh-add -L |& grep -q ssh-rsa ; then
+	    ssh-add &>/dev/null
+    fi
+fi
+
+# shell setup
+envrc=~/environment.conf
+if [ -r $envrc ] ; then
+    set -o allexport
+    . $envrc
+    set +o allexport
+fi
+
+if [ -d /opt/cornac/bin ] ; then
+	export PATH=/opt/cornac/bin:$PATH
+fi
+
+exec "${@-/bin/bash}"

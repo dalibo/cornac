@@ -6,6 +6,7 @@ authors = ["Étienne BERSAC <etienne.bersac@dalibo.com>"]
 license = "PostgreSQL"
 packages = [{ include = "cornac" }]
 readme = "README.md"
+include = ["cornac/files/*"]
 
 [tool.poetry.dependencies]
 python = "^3.6"

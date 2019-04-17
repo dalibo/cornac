@@ -11,6 +11,6 @@ insert_final_newline = true
 [*.yml]
 indent_size = 2
 
-[*.{sh,sql}]
+[{cornac-setup,bashrc,*.sh,*.sql}]
 indent_size = 8
 indent_style = tab

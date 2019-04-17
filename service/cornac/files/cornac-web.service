@@ -1,0 +1,14 @@
+[Unit]
+Description=RDS-compatible Managed-Postgres Webservice
+After=network.target
+
+[Service]
+Type=simple
+User=cornac-web
+Group=cornac-web
+Environment=SYSTEMD=1
+EnvironmentFile=/etc/opt/cornac/web/environment.conf
+ExecStart=/opt/cornac/bin/cornac-shell cornac --verbose serve
+
+[Install]
+WantedBy=multi-user.target

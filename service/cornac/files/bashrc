@@ -1,0 +1,22 @@
+# -*- shell-script -*-
+#
+# Lint for interactive shell of cornac users.
+#
+
+build_ps1() {
+    # Put worker in red, this user is privileged compared to web.
+    if [ "${USERNAME#*-}" = "worker" ] ; then
+	    ucol=31
+    else
+	    ucol=36
+    fi
+    user='\[\e[0;'$ucol'm\]\u\[\e[0m\]'
+    host='\[\e[33m\]\h\[\e[0m\]'
+    # Highlight command failure with a bold red bang.
+    prompt='$(if [ $? -eq 0 ] ; then echo "\$" ; else echo '"'"'\[\e[91;1m\]!\[\e[0m\]'"'"'; fi)'
+    echo "${user}@${host}:\w${prompt} "
+}
+PS1=$(build_ps1)
+unset build_ps1
+
+export SHELL=/bin/bash
