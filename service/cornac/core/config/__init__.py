@@ -36,7 +36,7 @@ def filter_env(config, environ=os.environ):
 def read_ssh_key():
     logger.debug("Reading SSH keys from agent.")
     try:
-        out = subprocess.check_output(["ssh-add", "-qL"])
+        out = subprocess.check_output(["ssh-add", "-L"])
     except Exception as e:
         raise KnownError(f"Failed to read SSH public key: {e}") from None
 
