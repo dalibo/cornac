@@ -138,7 +138,7 @@ def generate_credentials(save):
     if not save:
         return
 
-    path = current_app.config['CONFIG']
+    path, *_ = current_app.config['CONFIG'].split(',')
     logging.info("Saving credentials to %s.", path)
     new_file = not os.path.exists(path)
     if new_file:

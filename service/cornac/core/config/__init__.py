@@ -14,9 +14,11 @@ def configure(app, environ=os.environ):
     c = app.config
     c.from_mapping(filter_env(c, environ=environ))
 
-    path = os.path.realpath(app.config['CONFIG'])
-    if os.path.exists(path):
-        app.config.from_pyfile(path)
+    pathes = app.config['CONFIG'].split(',')
+    for path in pathes:
+        path = os.path.realpath(path)
+        if os.path.exists(path):
+            app.config.from_pyfile(path)
 
     if not c['DRAMATIQ_BROKER_URL']:
         c['DRAMATIQ_BROKER_URL'] = c['SQLALCHEMY_DATABASE_URI']
