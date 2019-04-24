@@ -1,4 +1,5 @@
 import os.path
+from pathlib import Path
 from pkg_resources import get_distribution
 from warnings import filterwarnings
 
@@ -19,7 +20,7 @@ except Exception:
 
 def create_app(environ=os.environ):
 
-    app = Flask(__name__)
+    app = Flask(__name__, instance_path=str(Path.home()))
 
     from .core.config import configure
     configure(app, environ=environ)
