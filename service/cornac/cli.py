@@ -25,6 +25,7 @@ from sqlalchemy.exc import IntegrityError
 from werkzeug import __version__ as werkzeug_version
 
 from . import create_app, worker, __version__
+from .core.config import require_ssh_key
 from .core.config.writer import append_credentials
 from .core.model import DBInstance, db, connect
 from .core.user import generate_key, generate_secret
@@ -91,6 +92,7 @@ def root(ctx, verbose):
               show_default=True, metavar='SIZE_GB',)
 @click.pass_context
 def bootstrap(ctx, pgversion, size):
+    require_ssh_key()
     connstring = current_app.config['SQLALCHEMY_DATABASE_URI']
     pgurl = urlparse(connstring)
     command = dict(

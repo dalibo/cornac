@@ -2,6 +2,8 @@ import logging
 import os
 import subprocess
 
+from flask import current_app
+
 from cornac.errors import KnownError
 
 
@@ -23,7 +25,7 @@ def configure(app, environ=os.environ):
     if not c['DRAMATIQ_BROKER_URL']:
         c['DRAMATIQ_BROKER_URL'] = c['SQLALCHEMY_DATABASE_URI']
 
-    if not c['DEPLOY_KEY']:
+    if not c['DEPLOY_KEY'] and 'SSH_AUTH_SOCK' in environ:
         c['DEPLOY_KEY'] = read_ssh_key()
 
 
@@ -43,7 +45,10 @@ def read_ssh_key():
         raise KnownError(f"Failed to read SSH public key: {e}") from None
 
     keys = out.decode('utf-8').splitlines()
-    if not keys:
-        raise KnownError("SSH Agent has no key loaded.")
+    if keys:
+        return keys[0]
 
-    return keys[0]
+
+def require_ssh_key():
+    if not current_app.config['CONFIG']:
+        raise KnownError("SSH Agent has no key loaded.")
