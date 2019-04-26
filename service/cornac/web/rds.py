@@ -28,7 +28,7 @@ def log(requestid, action_name, identifier, result, code=200,
 @blueprint.route("/rds", methods=["POST"])
 def main():
     # Bridge RDS service and Flask routing. RDS actions are not RESTful.
-    payload = dict(request.form)
+    payload = dict(request.form.items(multi=False))
     action_name = payload.pop('Action')
     version = payload.pop('Version')
     identifier = payload.get('DBInstanceIdentifier', '-')
