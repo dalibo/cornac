@@ -1,0 +1,14 @@
+[Unit]
+Description=RDS-compatible Managed-Postgres Background Worker
+After=network.target
+
+[Service]
+Type=simple
+User=cornac-worker
+Group=cornac-worker
+Environment=SYSTEMD=1
+EnvironmentFile=/etc/opt/cornac/worker/environment.conf
+ExecStart=/opt/cornac/bin/cornac-shell cornac --verbose worker --processes 1
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,38 @@
+#!/bin/bash -eux
+#
+# Install cornac in a dedicated virtualenv /opt/cornac. This script respect
+# DESTDIR.
+#
+
+dist=${1-pgCornac}
+DESTDIR=$(readlink -m ${DESTDIR-/})
+DESTDIR=${DESTDIR%/}
+#       VIRTUALENV INSTALLATION
+
+VIRTUAL_ENV=${DESTDIR}/opt/cornac
+mkdir -p ${VIRTUAL_ENV}
+python3 -m venv --copies $VIRTUAL_ENV
+(
+    # subshell in virtualenv.
+    export PATH=${VIRTUAL_ENV}/bin:$PATH
+    hash -r pip3  # Ensure we use pip3 from virtualenv.
+    pip3 install --upgrade pip setuptools wheel
+    pip3 install --ignore-installed $dist 'psycopg2<2.8' libvirt-python pyvmomi
+    pip3 check
+)
+virtualenv-3 --python=/usr/bin/python3 --always-copy $VIRTUAL_ENV
+virtualenv-3 --python=/usr/bin/python3 --always-copy --relocatable $VIRTUAL_ENV
+${VIRTUAL_ENV}/bin/cornac --version
+
+#       SCRIPTS AND UNIT
+
+datadir=$(find ${VIRTUAL_ENV}/ -name "site-packages")/cornac/files
+test -d $datadir
+
+install --mode 0755 --directory $DESTDIR/usr/local/lib/systemd/system
+install --mode 0644 $datadir/cornac-{web,worker}.service $DESTDIR/usr/local/lib/systemd/system/
+
+# Symlink scripts in PATH.
+reldatadir=../lib/${datadir##*/lib/}
+test "$(readlink -e "${DESTDIR}/opt/cornac/bin/${reldatadir}")" = "$datadir"
+ln -fs $reldatadir/cornac-shell $reldatadir/cornac-setup $DESTDIR/opt/cornac/bin

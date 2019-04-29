@@ -5,6 +5,7 @@ from contextlib import contextmanager
 from flask import current_app
 from flask_dramatiq import Dramatiq
 
+from .core.config import require_ssh_key
 from .core.model import DBInstance, db
 from .errors import KnownError
 from .iaas import IaaS
@@ -82,6 +83,7 @@ def state_manager(instance, from_=None, to_='available'):
 
 @actor
 def create_db(instance_id):
+    require_ssh_key()
     config = current_app.config
     with state_manager(instance_id, from_='creating') as instance:
         with IaaS.connect(config['IAAS'], config) as iaas:
@@ -109,6 +111,7 @@ def delete_db_instance(instance_id):
 
 @actor
 def inspect_instance(instance_id):
+    require_ssh_key()
     instance = get_instance(instance_id)
     config = current_app.config
     with IaaS.connect(config['IAAS'], config) as iaas:
