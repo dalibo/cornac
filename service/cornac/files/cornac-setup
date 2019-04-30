@@ -102,6 +102,10 @@ set -x
 # Move to datadir so that other files are in current directory.
 cd $(readlink -m ${BASH_SOURCE[0]}/..)
 
+if ! locale -a | grep -q en_US.utf8 ; then
+	fatal "Cornac requires missing en_US.utf8 locale."
+fi
+
 mkdir -p /etc/opt/cornac
 
 if ! domain=$(guess_domain) ; then

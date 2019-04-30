@@ -6,7 +6,7 @@ After=network.target
 Type=simple
 User=cornac-worker
 Group=cornac-worker
-Environment=SYSTEMD=1
+Environment=LANG=en_US.utf8 SYSTEMD=1
 EnvironmentFile=/etc/opt/cornac/worker/environment.conf
 ExecStart=/opt/cornac/bin/cornac-shell cornac --verbose worker --processes 1
 
