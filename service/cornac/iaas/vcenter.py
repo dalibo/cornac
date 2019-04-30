@@ -108,9 +108,8 @@ class vCenter(IaaS):
         locspec.deviceChange.append(build_nic_spec(self.config['NETWORK']))
 
         if len(origin.rootSnapshot):
-            sstree = origin.snapshot.rootSnapshotList[0]
-            logger.debug("Using linked clone from '%s'.", sstree.name)
-            clonespec.snapshot = sstree.snapshot
+            clonespec.snapshot = origin.snapshot.currentSnapshot
+            logger.debug("Using linked clone from %s.", clonespec.snapshot)
             locspec.diskMoveType = 'createNewChildDiskBacking'
 
         try:
