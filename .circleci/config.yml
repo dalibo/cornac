@@ -10,10 +10,10 @@ workflows:
 
 jobs:
   0-unit-py36:
-    docker: [{image: "circleci/python:3.6-stretch"}]
+    docker: [{image: "dalibo/cornac-sdk:centos7"}]
     environment:
-      XDG_CACHE_HOME: /home/circleci/workspace/.cache/
-    working_directory: /home/circleci/workspace
+      XDG_CACHE_HOME: /workspace/.cache/
+    working_directory: /workspace
     steps:
     - checkout
     - restore_cache:
@@ -21,8 +21,6 @@ jobs:
     - run:
         name: Install requirements
         command: |
-          sudo apt-get -qq update -y;
-          sudo apt-get -qq install --no-install-recommends libev-dev;
           cd service/;
           poetry install;
     - save_cache:
