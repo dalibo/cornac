@@ -4,3 +4,4 @@ dist/
 pip-wheel-metadata/
 config.py
 tests-func-tmp-config.py
+*.rpm

@@ -1,0 +1,51 @@
+#!/bin/bash -eux
+#
+# Usage: mkrpm dist/pgCornac*.whl
+#
+# Wraps cornac bundle in a rpm.
+#
+
+dist=${1-pgCornac}
+install=${0/mkrpm/install}
+workdir=$(mktemp --directory -t cornac-rpm-XXX)
+
+teardown () {
+    if [ "0" = "${CLEAN-1}" ] ; then
+        return
+    fi
+
+    rm -rf $workdir
+    yum remove -qy cornac
+}
+trap teardown EXIT INT TERM
+
+# BUILD
+
+export DESTDIR=${workdir}/build
+$install $dist
+version=$($DESTDIR/opt/cornac/bin/python -c 'import pkg_resources as p; print(p.get_distribution("pgCornac").version)')
+
+fpm --verbose \
+    --force \
+    --debug-workspace \
+    --workdir=$workdir \
+    --input-type dir \
+    --output-type rpm \
+    --name cornac \
+    --version $version \
+    --iteration 1 \
+    --architecture amd64 \
+    --description "RDS-compatible Managed-Postgres Webservice" \
+    --category database \
+    --license PostgreSQL \
+    --depends libev \
+    --depends libvirt-libs \
+    --depends python36 \
+    $DESTDIR/=/
+
+# TEST
+
+rpm=cornac-$version-1.x86_64.rpm
+test -f $rpm
+yum install -qy $rpm
+/opt/cornac/bin/cornac --version

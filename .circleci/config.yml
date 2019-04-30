@@ -5,15 +5,15 @@ workflows:
   pipeline:
     jobs:
     - 0-unit-py36
-    - 0-bundle-centos7
+    - 0-rpm-centos7
 
 
 jobs:
   0-unit-py36:
-    docker: [{image: "circleci/python:3.6-stretch"}]
+    docker: [{image: "dalibo/cornac-sdk:centos7"}]
     environment:
-      XDG_CACHE_HOME: /home/circleci/workspace/.cache/
-    working_directory: /home/circleci/workspace
+      XDG_CACHE_HOME: /workspace/.cache/
+    working_directory: /workspace
     steps:
     - checkout
     - restore_cache:
@@ -21,8 +21,6 @@ jobs:
     - run:
         name: Install requirements
         command: |
-          sudo apt-get -qq update -y;
-          sudo apt-get -qq install --no-install-recommends libev-dev;
           cd service/;
           poetry install;
     - save_cache:
@@ -35,7 +33,7 @@ jobs:
           poetry run flake8 cornac/ tests/;
           poetry run pytest -x tests/unit/;
 
-  0-bundle-centos7:
+  0-rpm-centos7:
     docker: [{image: "dalibo/cornac-sdk:centos7"}]
     environment:
       XDG_CACHE_HOME: /workspace/.cache/
@@ -45,16 +43,15 @@ jobs:
     - restore_cache:
         key: v1-cornac-unit
     - run:
-        name: Build wheel
+        name: Build Python packages
         command: |
           cd service/;
           poetry -vvv build
     - run:
-        name: Bundle
+        name: Build rpm package from wheel
         command: |
           cd service/;
-          packaging/install dist/pgCornac-*.whl
-          /opt/cornac/bin/cornac --help
+          packaging/mkrpm dist/pgCornac-*.whl
     - save_cache:
         key: v1-cornac-unit-{{ epoch }}
         paths: ["/workspace/.cache/"]

@@ -1,0 +1,8 @@
+version: '2'
+
+services:
+  centos7:
+    image: dalibo/cornac-sdk:centos7
+    volumes:
+    - ..:/workspace
+    entrypoint: [/workspace/packaging/mkrpm]
