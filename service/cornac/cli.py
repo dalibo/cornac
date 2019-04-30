@@ -76,7 +76,8 @@ def get_version(ctx, param, value):
 @click.pass_context
 def root(ctx, verbose):
     appname = ctx.invoked_subcommand or 'cornac'
-    setup_logging(appname=appname, verbose=verbose)
+    systemd = 'SYSTEMD' in os.environ
+    setup_logging(appname=appname, verbose=verbose, systemd=systemd)
 
 
 @root.command(help=dedent(
@@ -251,7 +252,8 @@ def recover(instances):
 
 def entrypoint():
     debug = os.environ.get('DEBUG', '').lower() in ('1', 'y')
-    setup_logging(verbose=debug)
+    systemd = 'SYSTEMD' in os.environ
+    setup_logging(verbose=debug, systemd=systemd)
 
     try:
         exit(root())
@@ -273,16 +275,38 @@ def entrypoint():
     exit(os.EX_SOFTWARE)
 
 
-def setup_logging(*, appname='cornac', verbose):
-    format = '%(levelname)1.1s: %(message)s'
-    if verbose:
-        format = f'%(asctime)s {appname}[%(process)s] {format}'
+class SystemdFormatter(logging.Formatter):
+    # cf. http://0pointer.de/blog/projects/journal-submit.html
+
+    priority_map = {
+        logging.NOTSET: 6,
+        logging.DEBUG: 7,
+        logging.INFO: 6,
+        logging.WARNING: 4,
+        logging.ERROR: 3,
+        logging.CRITICAL: 2,
+    }
+
+    def format(self, record):
+        s = super().format(record)
+        return '<%d>%s' % (self.priority_map[record.levelno], s)
+
+
+def setup_logging(*, appname='cornac', verbose, systemd=False):
+    if systemd:
+        format_cls = SystemdFormatter.__module__ + ".SystemdFormatter"
+        format = '%(message)s'
+    else:
+        format_cls = 'logging.Formatter'
+        format = '%(levelname)1.1s: %(message)s'
+        if verbose:
+            format = f'%(asctime)s {appname}[%(process)s] {format}'
 
     config = {
         'version': 1,
         'formatters': {
             'default': {
-                '()': 'logging.Formatter',
+                '()': format_cls,
                 'format': format,
                 'datefmt': '%H:%M:%S',
             },
